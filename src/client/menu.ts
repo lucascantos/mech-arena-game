@@ -6,28 +6,41 @@ interface Item {
   action: () => void;
 }
 
+/** What the menu asks the game to do. */
+export interface MenuActions {
+  play(mode: ModeId): void;
+  /** Open a room others can join. */
+  host(): void;
+  /** Start the hosted match with whoever joined. */
+  startHosted(): void;
+  join(code: string): void;
+  /** Leave the host/join screens (closes any room or connection). */
+  leaveOnline(): void;
+}
+
+type Screen = "main" | "online" | "host" | "join";
+
 /**
- * The start menu: an HTML overlay with a main screen (Play, Online, Training
- * Ground) and an Online screen (Host Server, Join Server). Online isn't
- * implemented yet; its options explain that instead of starting anything.
+ * The start menu: an HTML overlay. Main screen: Play, Online, Training
+ * Ground. Online: Host Server (shows a room code and who joined) or Join
+ * Server (type a code).
  */
 export class Menu {
   private readonly root: HTMLElement;
-  private screen: "main" | "online" = "main";
+  private screen: Screen = "main";
+  private status = "";
+  private roomCode = "";
+  private players = 1;
 
-  constructor(private readonly onPick: (mode: ModeId) => void) {
+  constructor(private readonly actions: MenuActions) {
     this.root = document.createElement("div");
     this.root.className = "menu";
     document.body.append(this.root);
     this.render();
   }
 
-  get visible(): boolean {
-    return !this.root.hidden;
-  }
-
-  show(): void {
-    this.screen = "main";
+  show(screen: Screen = "main"): void {
+    this.screen = screen;
     this.render();
     this.root.hidden = false;
   }
@@ -36,43 +49,71 @@ export class Menu {
     this.root.hidden = true;
   }
 
-  /** Esc inside a sub-screen goes back to the main screen; returns whether it did. */
+  /** Esc: one screen back. Returns false on the main screen (nothing to go back to). */
   back(): boolean {
     if (this.screen === "main") return false;
-    this.screen = "main";
-    this.render();
+    if (this.screen === "host" || this.screen === "join") this.actions.leaveOnline();
+    this.show(this.screen === "online" ? "main" : "online");
     return true;
+  }
+
+  /** Host screen: the room's code and how many players are in it (host included). */
+  setRoom(code: string, players: number): void {
+    [this.roomCode, this.players] = [code, players];
+    if (this.screen === "host") this.render();
+  }
+
+  setStatus(text: string): void {
+    this.status = text;
+    const el = this.root.querySelector(".menu-status");
+    if (el) el.textContent = text;
   }
 
   private render(): void {
     this.root.replaceChildren();
-    const title = document.createElement("h1");
-    title.textContent = "MECH ARENA";
-    this.root.append(title);
-
+    this.el("h1", "MECH ARENA");
+    const a = this.actions;
     if (this.screen === "main") {
       this.buttons([
-        { title: "Play", detail: "8-player free-for-all against random mechs", action: () => this.onPick("ffa") },
-        { title: "Online", detail: "Host or join a match with other players", action: () => this.go("online") },
-        { title: "Training Ground", detail: "Practice on dummies that stand, strafe or shoot", action: () => this.onPick("training") },
+        { title: "Play", detail: "8-player free-for-all against random mechs", action: () => a.play("ffa") },
+        { title: "Online", detail: "Host or join a match with other players", action: () => this.show("online") },
+        { title: "Training Ground", detail: "Practice on dummies that stand, strafe or shoot", action: () => a.play("training") },
       ]);
-      this.hint("Esc returns to this menu");
-    } else {
-      const note = this.hint("");
-      const soon = (what: string) => () => (note.textContent = `${what} isn't available yet: online play is still being built.`);
+      this.el("p", "Esc returns to this menu", "menu-hint");
+    } else if (this.screen === "online") {
       this.buttons([
-        { title: "Host Server", detail: "Start a match other players can join", action: soon("Hosting") },
-        { title: "Join Server", detail: "Connect to a match someone is hosting", action: soon("Joining") },
+        { title: "Host Server", detail: "Your machine runs the match; friends join with a code", action: () => (this.show("host"), a.host()) },
+        { title: "Join Server", detail: "Connect to a match someone is hosting", action: () => this.show("join") },
         { title: "Back", detail: "Return to the main menu", action: () => this.back() },
       ]);
-      this.root.insertBefore(note, null);
+    } else if (this.screen === "host") {
+      this.el("p", "Room code", "menu-hint");
+      this.el("div", this.roomCode || "…", "menu-code");
+      this.el("p", `${this.players} / 8 players (bots fill the rest)`, "menu-detail");
+      this.buttons([
+        { title: "Start Match", detail: "8-player free-for-all with everyone here", action: () => this.roomCode && a.startHosted() },
+        { title: "Back", detail: "Close the room", action: () => this.back() },
+      ]);
+    } else {
+      const input = this.el("input", "", "menu-input") as HTMLInputElement;
+      input.placeholder = "ROOM CODE";
+      input.maxLength = 5;
+      input.addEventListener("keydown", (e) => e.key === "Enter" && a.join(input.value));
+      this.buttons([
+        { title: "Join", detail: "Connect to that room", action: () => a.join(input.value) },
+        { title: "Back", detail: "Return to the online menu", action: () => this.back() },
+      ]);
+      input.focus();
     }
-    this.root.querySelector("button")?.focus();
+    this.el("p", this.status, "menu-status");
   }
 
-  private go(screen: "main" | "online"): void {
-    this.screen = screen;
-    this.render();
+  private el(tag: string, text: string, className?: string): HTMLElement {
+    const e = document.createElement(tag);
+    e.textContent = text;
+    if (className) e.className = className;
+    this.root.append(e);
+    return e;
   }
 
   private buttons(items: Item[]): void {
@@ -82,13 +123,5 @@ export class Menu {
       button.addEventListener("click", item.action);
       this.root.append(button);
     }
-  }
-
-  private hint(text: string): HTMLElement {
-    const p = document.createElement("p");
-    p.className = "menu-hint";
-    p.textContent = text;
-    this.root.append(p);
-    return p;
   }
 }

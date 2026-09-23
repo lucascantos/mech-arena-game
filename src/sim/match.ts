@@ -6,12 +6,22 @@ const ROUND_END_DELAY = secondsToTicks(2);
 /** Countdown before every round, while everyone is held at their spawn. */
 export const COUNTDOWN_TICKS = secondsToTicks(3);
 
+/** What the HUD needs to know about a match (a real Match, or a joined player's mirror of one). */
+export interface MatchView {
+  readonly scores: Map<number, number>;
+  readonly roundOver: boolean;
+  readonly inCountdown: boolean;
+  readonly countdownLeft: number;
+  readonly fightTicks: number;
+  readonly lastWinner: number | null;
+}
+
 /**
  * Round flow on top of the World: every round opens with a 3s countdown
  * (aim only, no moving or shooting); when only one team is left standing, it
  * scores, and after a short pause everyone respawns for the next countdown.
  */
-export class Match {
+export class Match implements MatchView {
   /** Rounds won, by team. */
   readonly scores = new Map<number, number>();
   /** Ticks until the next round starts, or -1 while a round is in progress. */

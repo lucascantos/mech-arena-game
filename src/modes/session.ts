@@ -11,6 +11,7 @@ import type { Input } from "../sim/input";
 import { Match } from "../sim/match";
 import { Scoreboard } from "../sim/scoreboard";
 import { World } from "../sim/world";
+import { updateLockOn, type Game } from "./game";
 import { Respawner, setupTraining } from "./training";
 
 export type ModeId = "ffa" | "duel" | "training";
@@ -23,12 +24,13 @@ const randomSeed = (): number => Math.floor(Math.random() * 2 ** 31);
  * training ground), who controls which mech, and the per-player client state
  * (kill cam, lock-on, scoreboard). "You" are always the first fighter.
  */
-export class Session {
+export class Session implements Game {
   readonly scoreboard: Scoreboard;
   readonly spectator: Spectator;
   readonly lockOn = new LockOn();
   /** Fighter you are driving (P toggles), or null while spectating. */
   possessedId: number | null;
+  readonly banner: string | null = null;
 
   private constructor(
     readonly world: World,
@@ -54,11 +56,16 @@ export class Session {
     return Session.lineup(Array.from({ length: count }, randomPreset), false);
   }
 
-  /** A match with these presets, all bots except you (unless spectating). */
-  static lineup(presets: MechPreset[], spectate: boolean): Session {
+  /**
+   * A match with these presets: you are the first, the rest are bots unless
+   * `controllers` (by lineup index) says otherwise, e.g. online players.
+   */
+  static lineup(presets: MechPreset[], spectate: boolean, controllers = new Map<number, Controller>()): Session {
     const world = new World(randomSeed());
     const fighters = spawnLineup(world, presets);
-    const bots = new Map<number, Controller>(fighters.map((f, i) => [f.id, new DuelBot(presets[i].personality, i + 1)]));
+    const bots = new Map<number, Controller>(
+      fighters.map((f, i) => [f.id, controllers.get(i) ?? new DuelBot(presets[i].personality, i + 1)]),
+    );
     return new Session(world, new Match(world), fighters[0], bots, null, spectate);
   }
 
@@ -86,14 +93,12 @@ export class Session {
     this.respawner?.update(world);
     this.spectator.ingest(world.events, world);
     this.scoreboard.ingest(world.events);
-
-    // Lock-on: charge, switch or drop based on what's under your cursor.
-    if (keyboard.takeRightClick() || this.match?.roundOver) this.lockOn.clear();
-    const cursor = keyboard.cursor;
-    const [a, b] = camera.visibleWorld();
-    const visible = (p: { x: number; y: number }) => p.x >= a.x && p.x <= b.x && p.y >= a.y && p.y <= b.y;
-    // No locking during the pre-round countdown (no self = nothing charges, any lock drops).
-    const self = this.match?.inCountdown ? null : this.possessed;
-    this.lockOn.update(world, self, cursor ? camera.screenToWorld(cursor) : null, visible);
+    updateLockOn(this, keyboard, camera);
   }
+
+  renderAlpha(loopAlpha: number): number {
+    return loopAlpha;
+  }
+
+  close(): void {}
 }

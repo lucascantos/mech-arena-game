@@ -59,6 +59,17 @@ export abstract class Ability {
     return true;
   }
 
+  /** Active-phase timers a joined player needs to mirror the host's copy. */
+  netState(): [activeLeft: number, elapsed: number] {
+    return [this.activeLeft, this.elapsed];
+  }
+
+  /** Applies `netState()` from the host (online play). */
+  syncFromNet([activeLeft, elapsed]: [number, number]): void {
+    this.activeLeft = activeLeft;
+    this.elapsed = elapsed;
+  }
+
   /** Back to ready, e.g. on respawn. */
   reset(): void {
     this.activeLeft = 0;

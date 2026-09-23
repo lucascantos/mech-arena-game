@@ -1,6 +1,6 @@
 import type { Fighter } from "../sim/fighter";
 import { TICK_RATE } from "../sim/constants";
-import type { Match } from "../sim/match";
+import type { MatchView } from "../sim/match";
 import type { Scoreboard } from "../sim/scoreboard";
 import type { World } from "../sim/world";
 import { DAMAGE_COLORS, UI } from "./palette";
@@ -18,13 +18,15 @@ export interface HudInfo {
   showScoreboard: boolean;
   /** Lock-on toggled on (Q). */
   lockOnEnabled: boolean;
+  /** Extra line, e.g. the online room code. */
+  banner: string | null;
   fps: number;
 }
 
 export function drawHud(
   ctx: CanvasRenderingContext2D,
   world: World,
-  match: Match | null,
+  match: MatchView | null,
   hud: HudInfo,
   width: number,
   height: number,
@@ -34,6 +36,7 @@ export function drawHud(
   ctx.textAlign = "right";
   ctx.fillStyle = UI.muted;
   ctx.fillText(`tick ${world.tick}  ${hud.fps.toFixed(0)} fps`, width - 12, height - 34);
+  if (hud.banner) ctx.fillText(hud.banner, width - 12, height - 50);
 
   if (match) {
     drawScore(ctx, world, match, width);
@@ -68,7 +71,7 @@ export function drawHud(
 }
 
 /** Big 3-2-1 before each round, then a short "FIGHT!". */
-function drawCountdown(ctx: CanvasRenderingContext2D, match: Match, width: number, height: number): void {
+function drawCountdown(ctx: CanvasRenderingContext2D, match: MatchView, width: number, height: number): void {
   let text: string | null = null;
   if (match.inCountdown) text = String(Math.ceil(match.countdownLeft / TICK_RATE));
   else if (match.fightTicks < 45 && !match.roundOver) text = "FIGHT!";
@@ -79,7 +82,7 @@ function drawCountdown(ctx: CanvasRenderingContext2D, match: Match, width: numbe
   ctx.fillText(text, width / 2, height / 2 - 60);
 }
 
-function drawScore(ctx: CanvasRenderingContext2D, world: World, match: Match, width: number): void {
+function drawScore(ctx: CanvasRenderingContext2D, world: World, match: MatchView, width: number): void {
   // One colored entry per team; eliminated fighters are dimmed.
   const teams = [...match.scores.keys()];
   const leaders = teams.map((t) => world.fighters.find((f) => f.team === t)!);

@@ -60,6 +60,18 @@ export class Weapon<S extends WeaponStats = WeaponStats> {
     this.triggerWasHeld = false;
   }
 
+  /** Timers a joined player needs to mirror the host's copy of this weapon. */
+  netState(): [ammo: number, reloadLeft: number, bloom: number] {
+    return [this.ammo, this.reloadLeft, Math.round(this.bloom * 10) / 10];
+  }
+
+  /** Applies `netState()` from the host (online play). */
+  syncFromNet([ammo, reloadLeft, bloom]: [number, number, number]): void {
+    this.ammo = ammo;
+    this.reloadLeft = reloadLeft;
+    this.bloom = bloom;
+  }
+
   reset(): void {
     this.ammo = this.stats.magazine;
     this.shotCooldown = 0;

@@ -1,6 +1,6 @@
 import type { LockOn } from "../client/lockOn";
 import type { Fighter } from "../sim/fighter";
-import type { Match } from "../sim/match";
+import type { MatchView } from "../sim/match";
 import { lerp, type Vec2 } from "../sim/vec";
 import type { World } from "../sim/world";
 import { Camera } from "./camera";
@@ -57,7 +57,7 @@ export class Renderer {
   }
 
   /** `match` is null in modes without rounds (Training Ground). */
-  render(world: World, match: Match | null, alpha: number, hud: HudInfo, view: ViewInfo): void {
+  render(world: World, match: MatchView | null, alpha: number, hud: HudInfo, view: ViewInfo): void {
     const { focus } = view;
     this.resize();
     this.updateCamera(world, view, alpha);

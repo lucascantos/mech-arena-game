@@ -1,4 +1,4 @@
-import type { Match } from "../sim/match";
+import type { MatchView } from "../sim/match";
 import type { Fighter } from "../sim/fighter";
 import { accuracy, type FighterRecord, type Scoreboard } from "../sim/scoreboard";
 import type { World } from "../sim/world";
@@ -49,7 +49,7 @@ const ROW = 26;
 export function drawScoreboard(
   ctx: CanvasRenderingContext2D,
   world: World,
-  match: Match | null,
+  match: MatchView | null,
   board: Scoreboard,
   width: number,
   height: number,

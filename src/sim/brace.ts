@@ -20,6 +20,15 @@ export class Brace {
     return 1 - this.ticksLeft / this.totalTicks;
   }
 
+  get ticksRemaining(): number {
+    return this.ticksLeft;
+  }
+
+  /** Mirrors the host's remaining stagger (online play). */
+  syncFromNet(ticksLeft: number): void {
+    this.ticksLeft = ticksLeft;
+  }
+
   /** Advances one tick. Returns false once recovered. */
   update(): boolean {
     return --this.ticksLeft > 0;

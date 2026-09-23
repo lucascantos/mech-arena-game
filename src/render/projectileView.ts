@@ -1,4 +1,3 @@
-import { Missile } from "../sim/projectiles/missile";
 import { lerp } from "../sim/vec";
 import type { World } from "../sim/world";
 import { DAMAGE_COLORS } from "./palette";
@@ -10,7 +9,9 @@ export function drawProjectiles(ctx: CanvasRenderingContext2D, world: World, alp
     const color = DAMAGE_COLORS[p.damageType];
 
     // Homing lock: a faint dashed line from the missile to its target.
-    const target = p instanceof Missile && p.targetId !== undefined ? world.getFighter(p.targetId) : undefined;
+    // Missiles carry a targetId (also on a joined player's copy, which is plain data).
+    const targetId = (p as { targetId?: number }).targetId;
+    const target = targetId !== undefined ? world.getFighter(targetId) : undefined;
     if (target?.alive) {
       const tp = lerp(target.prevPos, target.pos, alpha);
       ctx.strokeStyle = color;
