@@ -4,6 +4,8 @@ import { emptyInput, type Input } from "./input";
 import type { WorldEvent } from "./events";
 import type { Projectile } from "./projectiles/projectile";
 import { Rng } from "./rng";
+import { spawnAssignment } from "./spawnRotation";
+import type { Vec2 } from "./vec";
 
 /**
  * The whole game state. Advances only through `step()`, one fixed tick at a
@@ -15,6 +17,8 @@ export class World {
   readonly width = ARENA_WIDTH;
   readonly height = ARENA_HEIGHT;
   readonly fighters: Fighter[] = [];
+  /** Fixed spawn points. When set, fighters swap between them each round (see spawnRotation). */
+  spawnPoints: Vec2[] = [];
   projectiles: Projectile[] = [];
   /** Events from the most recent tick. Cleared at the start of every step. */
   events: WorldEvent[] = [];
@@ -59,9 +63,17 @@ export class World {
     this.tick++;
   }
 
-  /** Puts every fighter back at its spawn and clears projectiles. */
-  resetRound(): void {
+  /** Moves fighters to their spawn points for `round` (0 = first round). */
+  assignSpawns(round: number): void {
+    if (this.spawnPoints.length === 0) return;
+    const spots = spawnAssignment(this.fighters.length, round);
+    this.fighters.forEach((f, i) => (f.spawn = { ...this.spawnPoints[spots[i]] }));
+  }
+
+  /** Clears projectiles and puts every fighter back at its spawn point for `round`. */
+  resetRound(round: number): void {
     this.projectiles = [];
+    this.assignSpawns(round);
     for (const f of this.fighters) f.respawn();
   }
 

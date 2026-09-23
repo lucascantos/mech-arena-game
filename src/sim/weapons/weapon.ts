@@ -111,6 +111,7 @@ export class Weapon<S extends WeaponStats = WeaponStats> {
           damageType: s.damageType,
           knockback: s.knockback,
           range: s.range,
+          critChance: owner.stats.critChance,
         }),
       );
     }

@@ -6,6 +6,7 @@ import { add, dist, normalize, perp, scale, sub, vec, type Vec2 } from "../sim/v
 import type { World } from "../sim/world";
 import { Gunner } from "./gunner";
 import type { Personality } from "./personality";
+import { Senses } from "./senses";
 import { ThreatSense } from "./threats";
 
 type Mode = "approach" | "circle" | "retreat";
@@ -14,14 +15,18 @@ type Mode = "approach" | "circle" | "retreat";
 const WALL_MARGIN = 120;
 
 /**
- * A 1v1 bot. Picks a mode every so often (approach, circle, retreat), strafes
+ * A bot. Picks a mode every so often (approach, circle, retreat), strafes
  * around its target, shoots with the weapon that suits the range and dodges
- * incoming shots. It only ever outputs an Input, exactly like a human would.
+ * incoming shots. It only ever outputs an Input, exactly like a human would,
+ * and it only knows what a human would: what's inside its view, plus stale
+ * radar contacts (see Senses). With nobody in view it hunts the nearest
+ * radar contact.
  */
 export class DuelBot implements Controller {
   private readonly rng: Rng;
   private readonly gunner: Gunner;
   private readonly threats: ThreatSense;
+  private readonly senses = new Senses();
   private mode: Mode = "circle";
   private modeTicksLeft = 0;
   private strafeSign = 1;
@@ -34,8 +39,10 @@ export class DuelBot implements Controller {
 
   readInput(self: Fighter, world: World): Input {
     const input = emptyInput();
-    const target = this.pickTarget(self, world);
-    if (!self.alive || !target) return input;
+    if (!self.alive) return input;
+    this.senses.update(self, world);
+    const target = this.senses.nearestVisible(self);
+    if (!target) return this.hunt(self, world, input);
 
     const dir = normalize(sub(target.pos, self.pos));
     const range = dist(self.pos, target.pos);
@@ -54,7 +61,7 @@ export class DuelBot implements Controller {
     input.reload = this.gunner.wantsReload(self, this.mode === "retreat");
 
     let move = normalize(add(this.steer(dir, range), this.wallAvoidance(self, world)));
-    const dodge = this.threats.update(self, target, world);
+    const dodge = this.threats.update(self, target, this.senses.visibleProjectiles(self, world), world);
     if (dodge) {
       move = dodge;
       input.defend = true;
@@ -68,15 +75,26 @@ export class DuelBot implements Controller {
     return input;
   }
 
-  private pickTarget(self: Fighter, world: World): Fighter | undefined {
-    let best: Fighter | undefined;
-    let bestDist = Infinity;
-    for (const f of world.fighters) {
-      if (f === self || !f.alive || f.team === self.team) continue;
-      const d = dist(self.pos, f.pos);
-      if (d < bestDist) [best, bestDist] = [f, d];
-    }
-    return best;
+  /**
+   * Nobody in view: head for the nearest radar contact (or the arena center
+   * without one), facing where it's going, reloading on the way, and still
+   * dodging any shot it can see. Never fires blind.
+   */
+  private hunt(self: Fighter, world: World, input: Input): Input {
+    const contact = this.senses.nearestContact(self, world);
+    const goal = contact?.pos ?? vec(world.width / 2, world.height / 2);
+    const toGoal = sub(goal, self.pos);
+    const arrived = Math.hypot(toGoal.x, toGoal.y) < 60;
+    let move = arrived ? vec() : normalize(add(normalize(toGoal), this.wallAvoidance(self, world)));
+    const dodge = this.threats.update(self, null, this.senses.visibleProjectiles(self, world), world);
+    if (dodge) [move, input.defend] = [dodge, true];
+    input.moveX = move.x;
+    input.moveY = move.y;
+    const look = arrived ? self.facing : normalize(toGoal);
+    input.aimX = look.x;
+    input.aimY = look.y;
+    input.reload = this.gunner.wantsReload(self, true);
+    return input;
   }
 
   private chooseMode(range: number): void {

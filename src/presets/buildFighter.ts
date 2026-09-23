@@ -18,7 +18,7 @@ export interface Placement {
  * Throws if the preset has more weapons than its torso can carry.
  */
 export function buildFighter(preset: MechPreset, at: Placement): Fighter {
-  const fighter = new Fighter({ ...at, name: at.name ?? preset.name, legs: preset.legs, torso: preset.torso });
+  const fighter = new Fighter({ ...at, name: at.name ?? preset.name, legs: preset.legs, torso: preset.torso, head: preset.head });
   for (const WeaponType of preset.weapons) fighter.equipWeapon(new WeaponType());
   return fighter.setDefense(new Dodge());
 }

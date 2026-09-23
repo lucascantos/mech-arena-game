@@ -1,5 +1,4 @@
 import type { Vec2 } from "../sim/vec";
-import { VIEW_HEIGHT, VIEW_WIDTH } from "./view";
 
 /**
  * Lock-on strength: how far the camera leans from the player toward the
@@ -31,10 +30,17 @@ export class LookAhead {
 
   /**
    * `aim` is the cursor's offset from the view center in world units, or null
-   * without a cursor. Eases toward the matching lean and returns it.
+   * without a cursor. `lock` is the locked target's offset from the player:
+   * when set, the camera frames the midpoint of player and target instead.
+   * `viewW`/`viewH` is the size of the view in world units (the lean keeps
+   * the player inside it). Eases toward the matching lean and returns it.
    */
-  update(aim: Vec2 | null, dt: number): Vec2 {
-    const desired = aim ? this.desired(aim) : { x: 0, y: 0 };
+  update(aim: Vec2 | null, dt: number, lock: Vec2 | null, viewW: number, viewH: number): Vec2 {
+    const limit = (lean: Vec2): Vec2 => ({
+      x: clamp(lean.x, viewW / 2 - MARGIN),
+      y: clamp(lean.y, viewH / 2 - MARGIN),
+    });
+    const desired = lock ? limit({ x: lock.x / 2, y: lock.y / 2 }) : aim ? limit(this.desired(aim)) : { x: 0, y: 0 };
     const t = 1 - Math.exp(-LOOK_SHARPNESS * dt);
     this.offset = {
       x: this.offset.x + (desired.x - this.offset.x) * t,
@@ -48,10 +54,7 @@ export class LookAhead {
     if (dist <= DEAD_ZONE) return { x: 0, y: 0 };
     // Only the part beyond the dead zone counts, so the lean starts from zero instead of jumping.
     const k = ((dist - DEAD_ZONE) / dist) * LOOK_WEIGHT;
-    return {
-      x: clamp(aim.x * k, VIEW_WIDTH / 2 - MARGIN),
-      y: clamp(aim.y * k, VIEW_HEIGHT / 2 - MARGIN),
-    };
+    return { x: aim.x * k, y: aim.y * k };
   }
 }
 

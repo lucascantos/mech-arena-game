@@ -3,6 +3,7 @@ import type { Defense } from "./abilities/defense";
 import { Brace } from "./brace";
 import { DT } from "./constants";
 import type { Input } from "./input";
+import { STANDARD_HEAD, type Head } from "./parts/head";
 import { BIPEDAL, type Legs } from "./parts/legs";
 import { computeStats, type FighterStats, type Parts } from "./parts/stats";
 import { MEDIUM_TORSO, type Torso } from "./parts/torso";
@@ -22,6 +23,7 @@ export interface FighterConfig {
   pos: Vec2;
   legs?: Legs;
   torso?: Torso;
+  head?: Head;
 }
 
 export class Fighter {
@@ -29,7 +31,8 @@ export class Fighter {
   readonly name: string;
   readonly team: number;
   readonly color: string;
-  readonly spawn: Vec2;
+  /** Where it (re)spawns; the match may move it between rounds. */
+  spawn: Vec2;
 
   readonly parts: Parts;
   /** Final numbers from all parts. */
@@ -57,7 +60,7 @@ export class Fighter {
     this.name = config.name;
     this.team = config.team;
     this.color = config.color;
-    this.parts = { legs: config.legs ?? BIPEDAL, torso: config.torso ?? MEDIUM_TORSO };
+    this.parts = { legs: config.legs ?? BIPEDAL, torso: config.torso ?? MEDIUM_TORSO, head: config.head ?? STANDARD_HEAD };
     this.stats = computeStats(this.parts);
     this.hp = this.stats.maxHp;
     this.spawn = { ...config.pos };

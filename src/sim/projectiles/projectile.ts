@@ -1,4 +1,4 @@
-import { DT } from "../constants";
+import { CRIT_MULTIPLIER, DT } from "../constants";
 import type { Fighter } from "../fighter";
 import { segmentHitsBox } from "../geometry";
 import { add, length, lerp, normalize, scale, type Vec2 } from "../vec";
@@ -18,6 +18,8 @@ export interface ProjectileSpec {
   knockback: number;
   /** Distance it can travel before it expires. */
   range: number;
+  /** Chance (0–1) this projectile crits when it hits; the shooter's head decides it. */
+  critChance: number;
 }
 
 /**
@@ -33,6 +35,7 @@ export class Projectile {
   readonly damage: number;
   readonly damageType: DamageType;
   readonly knockback: number;
+  readonly critChance: number;
   pos: Vec2;
   prevPos: Vec2;
   vel: Vec2;
@@ -47,6 +50,7 @@ export class Projectile {
     this.damage = spec.damage;
     this.damageType = spec.damageType;
     this.knockback = spec.knockback;
+    this.critChance = spec.critChance;
     this.pos = { ...spec.pos };
     this.prevPos = { ...spec.pos };
     this.vel = spec.vel;
@@ -94,16 +98,26 @@ export class Projectile {
     this.alive = false;
     this.pos = point;
     world.emit({ kind: "impact", pos: point, damageType: this.damageType });
-    const dealt = target ? this.hit(world, target, this.damage, normalize(this.vel), this.knockback, point) : 0;
+    if (!target) return;
+    const crit = this.rollCrit(world);
+    const dealt = this.hit(world, target, this.damage, normalize(this.vel), this.knockback, point, crit);
     if (dealt > 0) world.emit({ kind: "projectileHit", ownerId: this.ownerId });
   }
 
-  /** Applies damage and knockback to one fighter; returns the damage actually dealt. */
-  protected hit(world: World, f: Fighter, damage: number, dir: Vec2, knockback: number, at: Vec2): number {
-    const dealt = f.takeDamage(damage);
+  /** One roll per projectile hit, from the world's seeded RNG so it stays deterministic. */
+  protected rollCrit(world: World): boolean {
+    return this.critChance > 0 && world.rng.chance(this.critChance);
+  }
+
+  /**
+   * Applies damage (×CRIT_MULTIPLIER on a crit) and knockback to one fighter;
+   * returns the damage actually dealt.
+   */
+  protected hit(world: World, f: Fighter, damage: number, dir: Vec2, knockback: number, at: Vec2, crit: boolean): number {
+    const dealt = f.takeDamage(crit ? damage * CRIT_MULTIPLIER : damage);
     if (dealt <= 0) return 0;
     f.applyKnockback(scale(dir, knockback));
-    world.emit({ kind: "damage", targetId: f.id, sourceId: this.ownerId, amount: dealt, pos: at });
+    world.emit({ kind: "damage", targetId: f.id, sourceId: this.ownerId, amount: dealt, pos: at, crit });
     if (!f.alive) world.emit({ kind: "kill", victimId: f.id, killerId: this.ownerId });
     return dealt;
   }

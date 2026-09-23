@@ -1,4 +1,5 @@
 import type { Fighter } from "../sim/fighter";
+import { spawnAssignment, spawnSlots } from "../sim/spawnRotation";
 import type { World } from "../sim/world";
 import { buildFighter } from "./buildFighter";
 import type { MechPreset } from "./presets";
@@ -14,19 +15,26 @@ const RING_X = 0.36;
 const RING_Y = 0.34;
 
 /**
- * Adds one fighter per preset, each on its own team (free-for-all), spaced
- * evenly on a ring around the arena center. Two fighters start left/right.
+ * Adds one fighter per preset, each on its own team (free-for-all). Spawn
+ * points are spaced evenly on a ring around the arena center (two fighters
+ * start left/right); who gets which point changes every round, so neighbors
+ * differ (see spawnRotation).
  */
 export function spawnLineup(world: World, presets: MechPreset[]): Fighter[] {
   const cx = world.width / 2;
   const cy = world.height / 2;
+  const slots = spawnSlots(presets.length);
+  world.spawnPoints = Array.from({ length: slots }, (_, k) => {
+    const angle = Math.PI + (k / slots) * Math.PI * 2;
+    return { x: cx + Math.cos(angle) * world.width * RING_X, y: cy + Math.sin(angle) * world.height * RING_Y };
+  });
+  const spots = spawnAssignment(presets.length, 0);
   const seen = new Map<string, number>();
   return presets.map((preset, i) => {
     const count = (seen.get(preset.id) ?? 0) + 1;
     seen.set(preset.id, count);
     const name = count > 1 ? `${preset.name} ${ROMAN[count - 1] ?? count}` : preset.name;
-    const angle = Math.PI + (i / presets.length) * Math.PI * 2;
-    const pos = { x: cx + Math.cos(angle) * world.width * RING_X, y: cy + Math.sin(angle) * world.height * RING_Y };
+    const pos = world.spawnPoints[spots[i]];
     const at = { id: i + 1, team: i + 1, color: COLORS[i % COLORS.length], pos, name };
     return world.addFighter(buildFighter(preset, at));
   });

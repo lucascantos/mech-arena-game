@@ -39,6 +39,7 @@ export class Rocket extends Projectile {
     this.alive = false;
     this.pos = center;
     world.emit({ kind: "explosion", pos: center, radius: this.blastRadius });
+    const crit = this.rollCrit(world); // one roll for the whole blast
     let dealt = 0;
     for (const f of world.fighters) {
       if (!f.alive || f.team === this.team) continue;
@@ -47,7 +48,7 @@ export class Rocket extends Projectile {
       const falloff = 1 - (1 - BLAST_EDGE_DAMAGE) * (d / this.blastRadius);
       const away = normalize(sub(f.pos, center));
       const dir = away.x === 0 && away.y === 0 ? normalize(this.vel) : away;
-      dealt += this.hit(world, f, this.damage * falloff, dir, this.knockback * falloff, f.pos);
+      dealt += this.hit(world, f, this.damage * falloff, dir, this.knockback * falloff, f.pos, crit);
     }
     if (dealt > 0) world.emit({ kind: "projectileHit", ownerId: this.ownerId });
   }

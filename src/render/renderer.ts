@@ -1,3 +1,4 @@
+import type { LockOn } from "../client/lockOn";
 import type { Fighter } from "../sim/fighter";
 import type { Match } from "../sim/match";
 import { lerp, type Vec2 } from "../sim/vec";
@@ -8,11 +9,22 @@ import { drawFighter } from "./fighterView";
 import { drawHud, type HudInfo } from "./hud";
 import { UI } from "./palette";
 import { drawProjectiles } from "./projectileView";
+import { drawLockOn } from "./lockOnView";
 import { drawMinimap } from "./minimap";
 import { Radar } from "./radar";
 import { drawRadarArrows } from "./radarArrows";
 
 const GRID = 50;
+
+/** What the camera should do this frame. */
+export interface ViewInfo {
+  /** Fighter the camera follows (ignored in overview mode). */
+  focus: Fighter | null;
+  /** Screen px; the camera leans toward it. Null while spectating. */
+  cursor: Vec2 | null;
+  /** Lock-on state; a locked target replaces the cursor lean. Null while spectating. */
+  lock: LockOn | null;
+}
 
 /**
  * Draws the world as plain boxes: each fighter and projectile is its bounding
@@ -33,14 +45,11 @@ export class Renderer {
     this.ctx = ctx;
   }
 
-  /**
-   * `alpha` in [0,1] is how far we are between the last two sim ticks.
-   * `focus` is the fighter the camera follows (ignored in overview mode).
-   * `cursor` (screen px) turns on lock-on: the camera leans from focus toward the cursor.
-   */
-  render(world: World, match: Match, alpha: number, hud: HudInfo, focus: Fighter | null, cursor: Vec2 | null = null): void {
+  /** `alpha` in [0,1] is how far we are between the last two sim ticks. */
+  render(world: World, match: Match, alpha: number, hud: HudInfo, view: ViewInfo): void {
+    const { focus } = view;
     this.resize();
-    this.updateCamera(world, focus, alpha, cursor);
+    this.updateCamera(world, view, alpha);
     const { ctx } = this;
     const dpr = window.devicePixelRatio || 1;
 
@@ -56,9 +65,11 @@ export class Renderer {
     ctx.clip();
     this.camera.apply(ctx);
     this.drawArena(world);
-    for (const f of world.fighters) drawFighter(ctx, f, alpha);
+    // Private info (HP, dodge, ammo) only for the fighter the camera follows: you, or who you spectate.
+    for (const f of world.fighters) drawFighter(ctx, f, alpha, f === focus);
     drawProjectiles(ctx, world, alpha);
     this.effects.draw(ctx);
+    if (view.lock) drawLockOn(ctx, world, view.lock, alpha);
     ctx.restore();
 
     if (this.camera.mode === "follow" && focus) {
@@ -69,13 +80,16 @@ export class Renderer {
     drawHud(ctx, world, match, hud, this.cssWidth, this.cssHeight);
   }
 
-  private updateCamera(world: World, focus: Fighter | null, alpha: number, cursor: Vec2 | null): void {
+  private updateCamera(world: World, { focus, cursor, lock }: ViewInfo, alpha: number): void {
     const now = performance.now();
     const dt = Math.min(0.1, (now - this.lastFrame) / 1000);
     this.lastFrame = now;
     if (this.camera.mode === "follow" && focus) {
       const target = lerp(focus.prevPos, focus.pos, alpha);
-      this.camera.follow(this.cssWidth, this.cssHeight, world.width, world.height, target, dt, cursor);
+      const locked = lock?.targetId == null ? undefined : world.getFighter(lock.targetId);
+      const lockPos = locked?.alive ? lerp(locked.prevPos, locked.pos, alpha) : null;
+      const { viewMultiplier } = focus.stats; // the followed mech's head sets how far it sees
+      this.camera.follow(this.cssWidth, this.cssHeight, world.width, world.height, target, dt, cursor, lockPos, viewMultiplier);
     } else {
       this.camera.fit(this.cssWidth, this.cssHeight, world.width, world.height);
     }

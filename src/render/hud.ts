@@ -33,18 +33,20 @@ export function drawHud(
   ctx.fillText(`tick ${world.tick}  ${hud.fps.toFixed(0)} fps`, width - 12, height - 34);
 
   drawScore(ctx, world, match, width);
-  if (hud.showScoreboard || match.roundOver) drawScoreboard(ctx, world, match, hud.scoreboard, width, height);
+  // Full stats only outside of battle (between rounds); while fighting, Tab shows just K / D / K/D.
+  if (match.roundOver) drawScoreboard(ctx, world, match, hud.scoreboard, width, height, "full");
+  else if (hud.showScoreboard) drawScoreboard(ctx, world, match, hud.scoreboard, width, height, "compact");
   if (hud.possessed) drawLoadout(ctx, hud.possessed, height);
 
   const you = world.fighters[0];
   let status: string;
   if (hud.possessed?.alive) {
-    status = `Controlling ${hud.possessed.name}.  WASD move · Space dodge · Click fire · 1-4/wheel switch · R reload · Tab release · V camera · Q stats`;
+    status = `Controlling ${hud.possessed.name}.  WASD move · Space dodge · Click fire · 1-4/wheel switch · R reload · Tab stats · P release · V camera`;
   } else if (you && !you.alive) {
     const by = hud.killer ? `Destroyed by ${hud.killer.name}` : "Destroyed";
-    status = `${by}.  Spectating ${hud.following.name} until the next round · Q stats`;
+    status = `${by}.  Spectating ${hud.following.name} until the next round · Tab stats`;
   } else {
-    status = `Spectating ${hud.following.name}.  Tab to take control · V toggle camera · Q stats`;
+    status = `Spectating ${hud.following.name}.  P take control · Tab stats · V toggle camera`;
   }
   ctx.font = "13px ui-monospace, Consolas, monospace";
   ctx.textAlign = "center";

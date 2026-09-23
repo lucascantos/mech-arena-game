@@ -17,6 +17,7 @@ export const UI = {
   defense: "#58a6ff",
   barBack: "#00000088",
   damage: "#ff7b72",
+  crit: "#ffd33d",
 };
 
 /** Darker variant of a #rrggbb color for outlines. */

@@ -17,6 +17,8 @@ A living list of ideas. Nothing here is decided unless it's under **Decisions so
 - **Defense** stays its own class hierarchy. There will be many types.
 - **Parts → stats.** A fighter's numbers (HP, size, speed, acceleration, turn rate, recoil/knockback multipliers, dash speed/cooldown multipliers) are computed from its parts in `computeStats()`. Legs are the first part: Bipedal, Quadpod, Treads. Torso/head/arms plug into the same function.
 - **Torso** (Light / Medium / Heavy): HP (added to legs HP), weapon capacity (1 / 2 / 3), speed multiplier (weight), defense cooldown multiplier, hitbox size bonus.
+- **Head** (Standard / Scout / Hunter): view bonus (base view is the minimum, heads only add), lock-on radius around the cursor, radar refresh interval, crit chance (crit = 1.5× damage, one roll per projectile hit; one per rocket blast).
+- **Fair bots:** bots perceive exactly what a human would: the same view rectangle (sized by their head, clamped at walls like the camera) plus radar contacts at their head's refresh rate. They only target, fire at and dodge what they can see; with nothing in view they hunt the nearest radar contact.
 - **Bracing** (self-stagger): every weapon has `selfStagger` seconds (0 for most; launchers 0.6). After firing, legs without `firesOnTheMove` (Bipedal) are rooted and can't act (move, turn, shoot, dodge) for that long. Quadpod and Treads fire on the move.
 - **Presets.** Builds are named presets (`src/presets/presets.ts`): name, legs, torso, weapons (up to capacity), plus an AI personality for when a bot drives it. New part slots get added as fields.
 - **First defense:** `Dodge` (a dash with invulnerability frames and a cooldown).

@@ -1,4 +1,5 @@
 import type { Vec2 } from "../sim/vec";
+import { clampAxis } from "../sim/vision";
 import { LookAhead } from "./lookAhead";
 import { VIEW_HEIGHT, VIEW_WIDTH, type ScreenRect } from "./view";
 
@@ -28,10 +29,13 @@ export class Camera {
   }
 
   /**
-   * Shows a fixed VIEW_WIDTH × VIEW_HEIGHT area of the world, as large as fits
+   * Shows a VIEW_WIDTH × VIEW_HEIGHT area of the world (times `viewMultiplier`,
+   * from the followed mech's head), as large as fits
    * on screen and centered (letterboxed if the screen's shape differs), easing
    * toward `target` without showing past the arena walls. With a `cursor`
-   * (screen px) the camera also leans toward it (lock-on); see LookAhead.
+   * (screen px) the camera also leans toward it; with a locked target
+   * (`lockPos`, world) it frames the midpoint of `target` and the lock
+   * instead. See LookAhead.
    */
   follow(
     width: number,
@@ -41,20 +45,25 @@ export class Camera {
     target: Vec2,
     dt: number,
     cursor: Vec2 | null = null,
+    lockPos: Vec2 | null = null,
+    viewMultiplier = 1,
   ): void {
-    this.scale = Math.min(width / VIEW_WIDTH, height / VIEW_HEIGHT);
-    const vw = VIEW_WIDTH * this.scale;
-    const vh = VIEW_HEIGHT * this.scale;
+    const viewW = VIEW_WIDTH * viewMultiplier;
+    const viewH = VIEW_HEIGHT * viewMultiplier;
+    this.scale = Math.min(width / viewW, height / viewH);
+    const vw = viewW * this.scale;
+    const vh = viewH * this.scale;
     this.viewport = { x: (width - vw) / 2, y: (height - vh) / 2, w: vw, h: vh };
 
     // The cursor's offset from the view center, in world units.
     const aim = cursor ? { x: (cursor.x - width / 2) / this.scale, y: (cursor.y - height / 2) / this.scale } : null;
-    const lean = this.lookAhead.update(aim, dt);
+    const lock = lockPos ? { x: lockPos.x - target.x, y: lockPos.y - target.y } : null;
+    const lean = this.lookAhead.update(aim, dt, lock, viewW, viewH);
     target = { x: target.x + lean.x, y: target.y + lean.y };
 
     const t = this.center ? 1 - Math.exp(-FOLLOW_SHARPNESS * dt) : 1;
     const prev = this.center ?? target;
-    const desired = { x: clampAxis(target.x, VIEW_WIDTH, worldW), y: clampAxis(target.y, VIEW_HEIGHT, worldH) };
+    const desired = { x: clampAxis(target.x, viewW, worldW), y: clampAxis(target.y, viewH, worldH) };
     this.center = { x: prev.x + (desired.x - prev.x) * t, y: prev.y + (desired.y - prev.y) * t };
     this.offsetX = width / 2 - this.center.x * this.scale;
     this.offsetY = height / 2 - this.center.y * this.scale;
@@ -79,10 +88,4 @@ export class Camera {
     const v = this.viewport;
     return [this.screenToWorld({ x: v.x, y: v.y }), this.screenToWorld({ x: v.x + v.w, y: v.y + v.h })];
   }
-}
-
-/** Keeps the view inside [0, world] on one axis; centers it if the world is smaller. */
-function clampAxis(center: number, viewSize: number, worldSize: number): number {
-  if (viewSize >= worldSize) return worldSize / 2;
-  return Math.min(worldSize - viewSize / 2, Math.max(viewSize / 2, center));
 }

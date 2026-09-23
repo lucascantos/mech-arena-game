@@ -3,8 +3,12 @@ import { lerp } from "../sim/vec";
 import { drawBrace } from "./braceView";
 import { shade, UI } from "./palette";
 
-/** Draws a fighter as its bounding box plus aim line, bars and weapon label. */
-export function drawFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha: number): void {
+/**
+ * Draws a fighter as its bounding box plus aim line and labels. `showPrivate`
+ * adds what only its own player should know (HP, dodge readiness, ammo and
+ * reloading); everyone else just sees its name, parts and weapon in hand.
+ */
+export function drawFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha: number, showPrivate: boolean): void {
   const p = lerp(f.prevPos, f.pos, alpha);
   const w = f.size.x;
   const h = f.size.y;
@@ -27,7 +31,8 @@ export function drawFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha: nu
   if (f.alive) {
     drawBrace(ctx, f, p.x, p.y);
     drawAim(ctx, f, p.x, p.y);
-    drawBars(ctx, f, x, y, w, h);
+    drawPublicLabel(ctx, f, x, y, w, h, showPrivate);
+    if (showPrivate) drawPrivateBars(ctx, f, x, y, w, h);
   }
   ctx.globalAlpha = 1;
 }
@@ -57,14 +62,26 @@ function drawAim(ctx: CanvasRenderingContext2D, f: Fighter, cx: number, cy: numb
   ctx.globalAlpha = 1;
 }
 
-function drawBars(ctx: CanvasRenderingContext2D, f: Fighter, x: number, y: number, w: number, h: number) {
-  // HP above.
+/** Name and parts above; the weapon in hand below (for others, without ammo). */
+function drawPublicLabel(ctx: CanvasRenderingContext2D, f: Fighter, x: number, y: number, w: number, h: number, own: boolean) {
+  ctx.textAlign = "center";
+  ctx.fillStyle = UI.text;
+  ctx.font = "12px system-ui, sans-serif";
+  ctx.fillText(`${f.name} · ${f.parts.head.shortName}/${f.parts.torso.shortName}/${f.parts.legs.shortName}`, x + w / 2, y - 18);
+  if (!own && f.weapon) {
+    ctx.font = "11px ui-monospace, Consolas, monospace";
+    ctx.fillStyle = UI.muted;
+    ctx.fillText(f.weapon.stats.shortName, x + w / 2, y + h + 24);
+  }
+}
+
+/** HP, dodge readiness, and ammo or reload progress: only for the fighter you are (or are spectating). */
+function drawPrivateBars(ctx: CanvasRenderingContext2D, f: Fighter, x: number, y: number, w: number, h: number) {
   ctx.fillStyle = UI.barBack;
   ctx.fillRect(x, y - 12, w, 6);
   ctx.fillStyle = UI.hp;
   ctx.fillRect(x, y - 12, (w * f.hp) / f.maxHp, 6);
 
-  // Defense readiness below.
   if (f.defense) {
     const ready = f.defense.readiness;
     ctx.fillStyle = UI.barBack;
@@ -73,15 +90,10 @@ function drawBars(ctx: CanvasRenderingContext2D, f: Fighter, x: number, y: numbe
     ctx.fillRect(x, y + h + 6, w * ready, 4);
   }
 
-  ctx.textAlign = "center";
-  ctx.fillStyle = UI.text;
-  ctx.font = "12px system-ui, sans-serif";
-  ctx.fillText(`${f.name} · ${f.parts.legs.shortName}/${f.parts.torso.shortName}`, x + w / 2, y - 18);
-
-  // Weapon + ammo, or a reload bar.
   const weapon = f.weapon;
   if (!weapon) return;
   const labelY = y + h + 24;
+  ctx.textAlign = "center";
   if (weapon.isReloading) {
     ctx.fillStyle = UI.barBack;
     ctx.fillRect(x, labelY - 8, w, 4);

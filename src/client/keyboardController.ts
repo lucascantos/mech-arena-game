@@ -18,6 +18,7 @@ export class KeyboardController implements Controller {
   private reloadQueued = false;
   private slotQueued = -1;
   private wheelSteps = 0;
+  private rightClickQueued = false;
 
   constructor(target: HTMLElement, private readonly camera: Camera) {
     window.addEventListener("keydown", (e) => {
@@ -40,6 +41,7 @@ export class KeyboardController implements Controller {
     });
     target.addEventListener("mousedown", (e) => {
       if (e.button === 0) this.mouseDown = true;
+      if (e.button === 2) this.rightClickQueued = true;
     });
     window.addEventListener("mouseup", (e) => {
       if (e.button === 0) this.mouseDown = false;
@@ -54,6 +56,13 @@ export class KeyboardController implements Controller {
   /** Cursor position in screen (CSS) px, or null before the mouse has moved over the game. */
   get cursor(): Vec2 | null {
     return this.mouseKnown ? { ...this.mouseScreen } : null;
+  }
+
+  /** True once per right-click (used to release the lock-on). */
+  takeRightClick(): boolean {
+    const clicked = this.rightClickQueued;
+    this.rightClickQueued = false;
+    return clicked;
   }
 
   /** Drops queued taps, e.g. when taking control so old presses don't fire. */

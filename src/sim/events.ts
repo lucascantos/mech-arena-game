@@ -5,7 +5,7 @@ import type { DamageType } from "./weapons/weaponStats";
 export type WorldEvent =
   | { kind: "impact"; pos: Vec2; damageType: DamageType }
   | { kind: "explosion"; pos: Vec2; radius: number }
-  | { kind: "damage"; targetId: number; sourceId: number; amount: number; pos: Vec2 }
+  | { kind: "damage"; targetId: number; sourceId: number; amount: number; pos: Vec2; crit: boolean }
   | { kind: "kill"; victimId: number; killerId: number }
   /** A weapon fired `count` projectiles (pellets count individually). */
   | { kind: "shot"; ownerId: number; count: number }

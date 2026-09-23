@@ -14,6 +14,8 @@ export class Match {
   /** Ticks until the next round starts, or -1 while a round is in progress. */
   private resetIn = -1;
   lastWinner: number | null = null;
+  /** Rounds started so far (0 = the first round). Decides who spawns where. */
+  round = 0;
 
   constructor(private readonly world: World) {
     for (const f of world.fighters) this.scores.set(f.team, 0);
@@ -31,7 +33,7 @@ export class Match {
     }
     if (this.resetIn === 0) {
       this.resetIn = -1;
-      this.world.resetRound();
+      this.world.resetRound(++this.round);
       this.world.emit({ kind: "roundStart" });
       return;
     }

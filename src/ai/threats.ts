@@ -1,4 +1,5 @@
 import type { Fighter } from "../sim/fighter";
+import type { Projectile } from "../sim/projectiles/projectile";
 import type { Rng } from "../sim/rng";
 import { dot, normalize, perp, scale, sub, vec, type Vec2 } from "../sim/vec";
 import type { World } from "../sim/world";
@@ -24,10 +25,14 @@ export class ThreatSense {
 
   constructor(private readonly rng: Rng, private readonly personality: Personality) {}
 
-  /** Returns a dodge direction if the bot should dodge this tick. */
-  update(self: Fighter, target: Fighter, world: World): Vec2 | null {
-    this.watchEnemyDash(self, target, world);
-    this.watchProjectiles(self, world);
+  /**
+   * Returns a dodge direction if the bot should dodge this tick. Only reacts
+   * to what the bot can see: `target` (null when nobody is in view) and the
+   * `projectiles` inside its view.
+   */
+  update(self: Fighter, target: Fighter | null, projectiles: Projectile[], world: World): Vec2 | null {
+    if (target) this.watchEnemyDash(self, target, world);
+    this.watchProjectiles(self, projectiles, world);
     if (this.dodgeAt !== world.tick) return null;
     this.dodgeAt = -1;
     return this.dodgeDir;
@@ -52,11 +57,11 @@ export class ThreatSense {
     this.schedule(world, scale(perp(toMe), this.rng.chance(0.5) ? 1 : -1), 1);
   }
 
-  private watchProjectiles(self: Fighter, world: World): void {
+  private watchProjectiles(self: Fighter, projectiles: Projectile[], world: World): void {
     if (this.seen.size > 300) this.prune(world);
     if (world.tick < this.quietUntil) return;
 
-    for (const p of world.projectiles) {
+    for (const p of projectiles) {
       if (p.team === self.team || this.seen.has(p.id)) continue;
       const speed = Math.hypot(p.vel.x, p.vel.y);
       const dir = scale(p.vel, 1 / speed);
