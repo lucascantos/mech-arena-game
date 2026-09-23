@@ -22,7 +22,6 @@ export function drawMinimap(
   camera: Camera,
   focus: Fighter,
   screenW: number,
-  screenH: number,
 ): void {
   const scale = WIDTH / world.width;
   const h = world.height * scale;
@@ -44,8 +43,9 @@ export function drawMinimap(
   ctx.clip();
 
   // What the camera currently shows.
-  const a = toMap(camera.screenToWorld({ x: 0, y: 0 }));
-  const b = toMap(camera.screenToWorld({ x: screenW, y: screenH }));
+  const [topLeft, bottomRight] = camera.visibleWorld();
+  const a = toMap(topLeft);
+  const b = toMap(bottomRight);
   ctx.strokeStyle = UI.muted;
   ctx.strokeRect(a.x, a.y, b.x - a.x, b.y - a.y);
 

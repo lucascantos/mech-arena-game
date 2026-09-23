@@ -36,7 +36,7 @@ export class Renderer {
   /**
    * `alpha` in [0,1] is how far we are between the last two sim ticks.
    * `focus` is the fighter the camera follows (ignored in overview mode).
-   * `cursor` (screen px) turns on lock-on: the camera centers between focus and cursor.
+   * `cursor` (screen px) turns on lock-on: the camera leans from focus toward the cursor.
    */
   render(world: World, match: Match, alpha: number, hud: HudInfo, focus: Fighter | null, cursor: Vec2 | null = null): void {
     this.resize();
@@ -48,7 +48,12 @@ export class Renderer {
     ctx.fillStyle = UI.background;
     ctx.fillRect(0, 0, this.cssWidth, this.cssHeight);
 
+    // World drawing is clipped to the viewport, so letterbox bars stay empty.
+    const v = this.camera.viewport;
     ctx.save();
+    ctx.beginPath();
+    ctx.rect(v.x, v.y, v.w, v.h);
+    ctx.clip();
     this.camera.apply(ctx);
     this.drawArena(world);
     for (const f of world.fighters) drawFighter(ctx, f, alpha);
@@ -58,8 +63,8 @@ export class Renderer {
 
     if (this.camera.mode === "follow" && focus) {
       this.radar.update(world, focus);
-      drawMinimap(ctx, world, this.radar, this.camera, focus, this.cssWidth, this.cssHeight);
-      drawRadarArrows(ctx, world, this.radar, this.camera, this.cssWidth, this.cssHeight);
+      drawMinimap(ctx, world, this.radar, this.camera, focus, this.cssWidth);
+      drawRadarArrows(ctx, world, this.radar, this.camera, this.cssHeight);
     }
     drawHud(ctx, world, match, hud, this.cssWidth, this.cssHeight);
   }

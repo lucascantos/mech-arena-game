@@ -18,30 +18,34 @@ export function drawRadarArrows(
   world: World,
   radar: Radar,
   camera: Camera,
-  screenW: number,
   screenH: number,
 ): void {
-  const cx = screenW / 2;
-  const cy = screenH / 2;
+  // Arrows live on the edge of the visible area (the letterboxed viewport),
+  // kept clear of the score row and the status line.
+  const v = camera.viewport;
+  const cx = v.x + v.w / 2;
+  const cy = v.y + v.h / 2;
+  const left = v.x + INSET_SIDE;
+  const right = v.x + v.w - INSET_SIDE;
+  const top = Math.max(v.y + INSET_SIDE, INSET_TOP);
+  const bottom = Math.min(v.y + v.h - INSET_SIDE, screenH - INSET_BOTTOM);
 
-  const onScreen = (x: number, y: number) => {
-    const px = x * camera.scale + camera.offsetX;
-    const py = y * camera.scale + camera.offsetY;
-    return px >= 0 && px <= screenW && py >= 0 && py <= screenH;
+  const visible = (x: number, y: number) => {
+    const p = camera.worldToScreen({ x, y });
+    return p.x >= v.x && p.x <= v.x + v.w && p.y >= v.y && p.y <= v.y + v.h;
   };
 
   for (const c of radar.contacts) {
     if (!c.alive) continue;
     const live = world.getFighter(c.fighterId);
-    if (live && onScreen(live.pos.x, live.pos.y)) continue;
-    // Pinged position in screen space, relative to the center.
-    const sx = c.pos.x * camera.scale + camera.offsetX - cx;
-    const sy = c.pos.y * camera.scale + camera.offsetY - cy;
-    if (Math.abs(sx) <= cx && Math.abs(sy) <= cy) continue; // on screen: you can see it
-
-    // Push the direction out to the inset screen border.
-    const tx = sx > 0 ? (cx - INSET_SIDE) / sx : sx < 0 ? (INSET_SIDE - cx) / sx : Infinity;
-    const ty = sy > 0 ? (cy - INSET_BOTTOM) / sy : sy < 0 ? (INSET_TOP - cy) / sy : Infinity;
+    if (live && visible(live.pos.x, live.pos.y)) continue;
+    if (visible(c.pos.x, c.pos.y)) continue; // pinged position is on screen: you can see it
+    // Direction from the view center to the pinged position, pushed out to the inset border.
+    const p = camera.worldToScreen(c.pos);
+    const sx = p.x - cx;
+    const sy = p.y - cy;
+    const tx = sx > 0 ? (right - cx) / sx : sx < 0 ? (left - cx) / sx : Infinity;
+    const ty = sy > 0 ? (bottom - cy) / sy : sy < 0 ? (top - cy) / sy : Infinity;
     const t = Math.min(tx, ty);
 
     ctx.save();

@@ -1,13 +1,8 @@
 import type { Vec2 } from "../sim/vec";
 import { LookAhead } from "./lookAhead";
+import { VIEW_HEIGHT, VIEW_WIDTH, type ScreenRect } from "./view";
 
 const PADDING = 40;
-/**
- * How far the player can see in follow mode: world units from the center of
- * the screen to the nearest screen edge. The zoom adapts to the window so this
- * distance is the same on every screen size (no advantage from a big monitor).
- */
-export const VIEW_DISTANCE = 480;
 /** How quickly the camera catches up to its target (per second, exponential). */
 const FOLLOW_SHARPNESS = 10;
 export type CameraMode = "follow" | "overview";
@@ -18,6 +13,8 @@ export class Camera {
   scale = 1;
   offsetX = 0;
   offsetY = 0;
+  /** Where the world is drawn on screen. Smaller than the canvas when letterboxed. */
+  viewport: ScreenRect = { x: 0, y: 0, w: 0, h: 0 };
   /** World point at the center of the screen in follow mode. */
   private center: Vec2 | null = null;
   private readonly lookAhead = new LookAhead();
@@ -27,13 +24,14 @@ export class Camera {
     this.scale = Math.min((width - PADDING * 2) / worldW, (height - PADDING * 2) / worldH);
     this.offsetX = (width - worldW * this.scale) / 2;
     this.offsetY = (height - worldH * this.scale) / 2;
+    this.viewport = { x: 0, y: 0, w: width, h: height };
   }
 
   /**
-   * Eases toward `target` at a fixed view distance, without showing past the
-   * arena edges (unless the arena is smaller than the view on that axis).
-   * With a `cursor` (screen px), the camera also leans toward it (lock-on);
-   * see LookAhead.
+   * Shows a fixed VIEW_WIDTH × VIEW_HEIGHT area of the world, as large as fits
+   * on screen and centered (letterboxed if the screen's shape differs), easing
+   * toward `target` without showing past the arena walls. With a `cursor`
+   * (screen px) the camera also leans toward it (lock-on); see LookAhead.
    */
   follow(
     width: number,
@@ -44,15 +42,19 @@ export class Camera {
     dt: number,
     cursor: Vec2 | null = null,
   ): void {
-    this.scale = Math.min(width, height) / (VIEW_DISTANCE * 2);
-    const lean = this.lookAhead.update(cursor, width, height, this.scale, dt);
+    this.scale = Math.min(width / VIEW_WIDTH, height / VIEW_HEIGHT);
+    const vw = VIEW_WIDTH * this.scale;
+    const vh = VIEW_HEIGHT * this.scale;
+    this.viewport = { x: (width - vw) / 2, y: (height - vh) / 2, w: vw, h: vh };
+
+    // The cursor's offset from the view center, in world units.
+    const aim = cursor ? { x: (cursor.x - width / 2) / this.scale, y: (cursor.y - height / 2) / this.scale } : null;
+    const lean = this.lookAhead.update(aim, dt);
     target = { x: target.x + lean.x, y: target.y + lean.y };
+
     const t = this.center ? 1 - Math.exp(-FOLLOW_SHARPNESS * dt) : 1;
     const prev = this.center ?? target;
-    const desired = {
-      x: clampAxis(target.x, width / this.scale, worldW),
-      y: clampAxis(target.y, height / this.scale, worldH),
-    };
+    const desired = { x: clampAxis(target.x, VIEW_WIDTH, worldW), y: clampAxis(target.y, VIEW_HEIGHT, worldH) };
     this.center = { x: prev.x + (desired.x - prev.x) * t, y: prev.y + (desired.y - prev.y) * t };
     this.offsetX = width / 2 - this.center.x * this.scale;
     this.offsetY = height / 2 - this.center.y * this.scale;
@@ -66,6 +68,16 @@ export class Camera {
 
   screenToWorld(p: Vec2): Vec2 {
     return { x: (p.x - this.offsetX) / this.scale, y: (p.y - this.offsetY) / this.scale };
+  }
+
+  worldToScreen(p: Vec2): Vec2 {
+    return { x: p.x * this.scale + this.offsetX, y: p.y * this.scale + this.offsetY };
+  }
+
+  /** World corners of the visible area (top-left, bottom-right). */
+  visibleWorld(): [Vec2, Vec2] {
+    const v = this.viewport;
+    return [this.screenToWorld({ x: v.x, y: v.y }), this.screenToWorld({ x: v.x + v.w, y: v.y + v.h })];
   }
 }
 
