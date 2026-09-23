@@ -1,0 +1,153 @@
+import type { Ability } from "./abilities/ability";
+import type { Defense } from "./abilities/defense";
+import { DT } from "./constants";
+import type { Input } from "./input";
+import type { Weapon } from "./weapons/weapon";
+import type { World } from "./world";
+import { add, clampUnit, normalize, scale, vec, type Vec2 } from "./vec";
+
+/** How quickly knockback fades (per second, exponential). */
+const KNOCKBACK_DECAY = 8;
+
+export interface FighterConfig {
+  id: number;
+  name: string;
+  team: number;
+  color: string;
+  pos: Vec2;
+  /** Bounding box size (the stand-in for the eventual art). */
+  size?: Vec2;
+  moveSpeed?: number;
+  maxHp?: number;
+}
+
+export class Fighter {
+  readonly id: number;
+  readonly name: string;
+  readonly team: number;
+  readonly color: string;
+  readonly size: Vec2;
+  readonly moveSpeed: number;
+  readonly maxHp: number;
+  readonly spawn: Vec2;
+
+  /** Center of the bounding box. */
+  pos: Vec2;
+  /** Position at the start of the last tick, for render interpolation. */
+  prevPos: Vec2;
+  vel: Vec2 = vec();
+  /** Velocity from being hit; added on top of movement and fades out. */
+  knockback: Vec2 = vec();
+  /** Unit vector the fighter is aiming at. */
+  facing: Vec2 = vec(1, 0);
+  hp: number;
+
+  readonly weapons: Weapon[] = [];
+  weaponSlot = 0;
+  defense: Defense | null = null;
+
+  constructor(config: FighterConfig) {
+    this.id = config.id;
+    this.name = config.name;
+    this.team = config.team;
+    this.color = config.color;
+    this.size = config.size ?? vec(48, 48);
+    this.moveSpeed = config.moveSpeed ?? 260;
+    this.maxHp = config.maxHp ?? 300;
+    this.hp = this.maxHp;
+    this.spawn = { ...config.pos };
+    this.pos = { ...config.pos };
+    this.prevPos = { ...config.pos };
+  }
+
+  equipWeapon(weapon: Weapon): this {
+    this.weapons.push(weapon);
+    return this;
+  }
+
+  setDefense(defense: Defense): this {
+    defense.attach(this);
+    this.defense = defense;
+    return this;
+  }
+
+  /** The weapon in hand, if any. */
+  get weapon(): Weapon | undefined {
+    return this.weapons[this.weaponSlot];
+  }
+
+  selectWeapon(slot: number): void {
+    if (slot === this.weaponSlot || slot < 0 || slot >= this.weapons.length) return;
+    this.weapon?.holster();
+    this.weaponSlot = slot;
+  }
+
+  get abilities(): Ability[] {
+    return this.defense ? [this.defense] : [];
+  }
+
+  get alive(): boolean {
+    return this.hp > 0;
+  }
+
+  get invulnerable(): boolean {
+    return this.abilities.some((a) => a.grantsInvulnerability());
+  }
+
+  /** False while dead or while an ability (e.g. a dash) is locking the fighter. */
+  canAct(): boolean {
+    return this.alive && !this.abilities.some((a) => a.blocksActions());
+  }
+
+  /** Returns the damage actually dealt (0 if invulnerable or dead). */
+  takeDamage(amount: number): number {
+    if (!this.alive || this.invulnerable) return 0;
+    const dealt = Math.min(this.hp, amount);
+    this.hp -= dealt;
+    return dealt;
+  }
+
+  applyKnockback(impulse: Vec2): void {
+    this.knockback = add(this.knockback, impulse);
+  }
+
+  respawn(): void {
+    this.hp = this.maxHp;
+    this.pos = { ...this.spawn };
+    this.prevPos = { ...this.spawn };
+    this.vel = vec();
+    this.knockback = vec();
+    this.weaponSlot = 0;
+    for (const w of this.weapons) w.reset();
+    for (const a of this.abilities) a.reset();
+  }
+
+  /** Reads one tick of input: aim, weapons, defense, desired velocity. */
+  applyInput(input: Input, world: World): void {
+    if (!this.alive) {
+      this.vel = vec();
+      return;
+    }
+    const aim = normalize(vec(input.aimX, input.aimY));
+    if (aim.x !== 0 || aim.y !== 0) this.facing = aim;
+
+    if (input.defend) this.defense?.tryActivate(input, world);
+    if (input.selectSlot >= 0) this.selectWeapon(input.selectSlot);
+    if (input.reload) this.weapon?.startReload();
+    this.weapon?.trigger(input.fire && this.canAct(), this, world);
+
+    if (!this.abilities.some((a) => a.controlsMovement())) {
+      const move = clampUnit(vec(input.moveX, input.moveY));
+      this.vel = scale(move, this.moveSpeed);
+    }
+  }
+
+  /** Advances timers and integrates position. */
+  update(world: World): void {
+    this.prevPos = { ...this.pos };
+    for (const ability of this.abilities) ability.update(world);
+    this.weapon?.update();
+    this.pos = add(this.pos, scale(add(this.vel, this.knockback), DT));
+    this.knockback = scale(this.knockback, Math.exp(-KNOCKBACK_DECAY * DT));
+  }
+}

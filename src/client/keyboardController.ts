@@ -1,0 +1,81 @@
+import type { Controller } from "../sim/controller";
+import type { Fighter } from "../sim/fighter";
+import type { Input } from "../sim/input";
+import type { Vec2 } from "../sim/vec";
+import type { Camera } from "../render/camera";
+
+const SLOT_KEYS = ["Digit1", "Digit2", "Digit3", "Digit4"];
+
+/** Turns WASD / Space / mouse / number keys into sim Inputs for one local player. */
+export class KeyboardController implements Controller {
+  private readonly keys = new Set<string>();
+  private mouseScreen: Vec2 = { x: 0, y: 0 };
+  private mouseDown = false;
+  // One-shot actions are queued on the event and consumed by the next tick, so taps are never lost.
+  private dodgeQueued = false;
+  private reloadQueued = false;
+  private slotQueued = -1;
+  private wheelSteps = 0;
+
+  constructor(target: HTMLElement, private readonly camera: Camera) {
+    window.addEventListener("keydown", (e) => {
+      this.keys.add(e.code);
+      if (e.code === "Space") e.preventDefault();
+      if (e.repeat) return;
+      if (e.code === "Space") this.dodgeQueued = true;
+      if (e.code === "KeyR") this.reloadQueued = true;
+      const slot = SLOT_KEYS.indexOf(e.code);
+      if (slot >= 0) this.slotQueued = slot;
+    });
+    window.addEventListener("keyup", (e) => this.keys.delete(e.code));
+    window.addEventListener("blur", () => {
+      this.keys.clear();
+      this.mouseDown = false;
+    });
+    target.addEventListener("mousemove", (e) => {
+      this.mouseScreen = { x: e.offsetX, y: e.offsetY };
+    });
+    target.addEventListener("mousedown", (e) => {
+      if (e.button === 0) this.mouseDown = true;
+    });
+    window.addEventListener("mouseup", (e) => {
+      if (e.button === 0) this.mouseDown = false;
+    });
+    target.addEventListener("wheel", (e) => {
+      this.wheelSteps += Math.sign(e.deltaY);
+      e.preventDefault();
+    }, { passive: false });
+    target.addEventListener("contextmenu", (e) => e.preventDefault());
+  }
+
+  /** Drops queued taps, e.g. when taking control so old presses don't fire. */
+  clearQueued(): void {
+    this.dodgeQueued = this.reloadQueued = false;
+    this.slotQueued = -1;
+    this.wheelSteps = 0;
+  }
+
+  readInput(self: Fighter): Input {
+    const k = (code: string) => (this.keys.has(code) ? 1 : 0);
+    const aim = this.camera.screenToWorld(this.mouseScreen);
+
+    let selectSlot = this.slotQueued;
+    if (selectSlot < 0 && this.wheelSteps !== 0 && self.weapons.length > 0) {
+      const n = self.weapons.length;
+      selectSlot = (((self.weaponSlot + this.wheelSteps) % n) + n) % n;
+    }
+
+    const input: Input = {
+      moveX: k("KeyD") - k("KeyA"),
+      moveY: k("KeyS") - k("KeyW"),
+      aimX: aim.x - self.pos.x,
+      aimY: aim.y - self.pos.y,
+      fire: this.mouseDown,
+      reload: this.reloadQueued,
+      selectSlot,
+      defend: this.dodgeQueued,
+    };
+    this.clearQueued();
+    return input;
+  }
+}
