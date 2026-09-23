@@ -69,6 +69,8 @@ startGameLoop(
     const possessed = possessedId === null ? null : (world.getFighter(possessedId) ?? null);
     const following = spectator.following(world) ?? fighters[0];
     const hud = { possessed, following, killer: spectator.killerOfHome, scoreboard, showScoreboard, fps };
-    renderer.render(world, match, alpha, hud, following);
+    // Lock-on camera only while you're driving a living mech; spectating just follows.
+    const cursor = possessed?.alive && following === possessed ? keyboard.cursor : null;
+    renderer.render(world, match, alpha, hud, following, cursor);
   },
 );

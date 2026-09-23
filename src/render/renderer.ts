@@ -1,6 +1,6 @@
 import type { Fighter } from "../sim/fighter";
 import type { Match } from "../sim/match";
-import { lerp } from "../sim/vec";
+import { lerp, type Vec2 } from "../sim/vec";
 import type { World } from "../sim/world";
 import { Camera } from "./camera";
 import { Effects } from "./effects";
@@ -36,10 +36,11 @@ export class Renderer {
   /**
    * `alpha` in [0,1] is how far we are between the last two sim ticks.
    * `focus` is the fighter the camera follows (ignored in overview mode).
+   * `cursor` (screen px) turns on lock-on: the camera centers between focus and cursor.
    */
-  render(world: World, match: Match, alpha: number, hud: HudInfo, focus: Fighter | null): void {
+  render(world: World, match: Match, alpha: number, hud: HudInfo, focus: Fighter | null, cursor: Vec2 | null = null): void {
     this.resize();
-    this.updateCamera(world, focus, alpha);
+    this.updateCamera(world, focus, alpha, cursor);
     const { ctx } = this;
     const dpr = window.devicePixelRatio || 1;
 
@@ -63,13 +64,13 @@ export class Renderer {
     drawHud(ctx, world, match, hud, this.cssWidth, this.cssHeight);
   }
 
-  private updateCamera(world: World, focus: Fighter | null, alpha: number): void {
+  private updateCamera(world: World, focus: Fighter | null, alpha: number, cursor: Vec2 | null): void {
     const now = performance.now();
     const dt = Math.min(0.1, (now - this.lastFrame) / 1000);
     this.lastFrame = now;
     if (this.camera.mode === "follow" && focus) {
       const target = lerp(focus.prevPos, focus.pos, alpha);
-      this.camera.follow(this.cssWidth, this.cssHeight, world.width, world.height, target, dt);
+      this.camera.follow(this.cssWidth, this.cssHeight, world.width, world.height, target, dt, cursor);
     } else {
       this.camera.fit(this.cssWidth, this.cssHeight, world.width, world.height);
     }

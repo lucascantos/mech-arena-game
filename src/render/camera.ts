@@ -1,4 +1,5 @@
 import type { Vec2 } from "../sim/vec";
+import { LookAhead } from "./lookAhead";
 
 const PADDING = 40;
 /**
@@ -9,7 +10,6 @@ const PADDING = 40;
 export const VIEW_DISTANCE = 480;
 /** How quickly the camera catches up to its target (per second, exponential). */
 const FOLLOW_SHARPNESS = 10;
-
 export type CameraMode = "follow" | "overview";
 
 /** Converts between screen and world space, either fitting the arena or following a target. */
@@ -20,6 +20,7 @@ export class Camera {
   offsetY = 0;
   /** World point at the center of the screen in follow mode. */
   private center: Vec2 | null = null;
+  private readonly lookAhead = new LookAhead();
 
   /** Fits the whole arena on screen. `width`/`height` are CSS pixels. */
   fit(width: number, height: number, worldW: number, worldH: number): void {
@@ -31,9 +32,21 @@ export class Camera {
   /**
    * Eases toward `target` at a fixed view distance, without showing past the
    * arena edges (unless the arena is smaller than the view on that axis).
+   * With a `cursor` (screen px), the camera also leans toward it (lock-on);
+   * see LookAhead.
    */
-  follow(width: number, height: number, worldW: number, worldH: number, target: Vec2, dt: number): void {
+  follow(
+    width: number,
+    height: number,
+    worldW: number,
+    worldH: number,
+    target: Vec2,
+    dt: number,
+    cursor: Vec2 | null = null,
+  ): void {
     this.scale = Math.min(width, height) / (VIEW_DISTANCE * 2);
+    const lean = this.lookAhead.update(cursor, width, height, this.scale, dt);
+    target = { x: target.x + lean.x, y: target.y + lean.y };
     const t = this.center ? 1 - Math.exp(-FOLLOW_SHARPNESS * dt) : 1;
     const prev = this.center ?? target;
     const desired = {

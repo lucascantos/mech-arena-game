@@ -10,6 +10,8 @@ const SLOT_KEYS = ["Digit1", "Digit2", "Digit3", "Digit4"];
 export class KeyboardController implements Controller {
   private readonly keys = new Set<string>();
   private mouseScreen: Vec2 = { x: 0, y: 0 };
+  /** False until the mouse first moves over the canvas (its position is unknown before that). */
+  private mouseKnown = false;
   private mouseDown = false;
   // One-shot actions are queued on the event and consumed by the next tick, so taps are never lost.
   private dodgeQueued = false;
@@ -34,6 +36,7 @@ export class KeyboardController implements Controller {
     });
     target.addEventListener("mousemove", (e) => {
       this.mouseScreen = { x: e.offsetX, y: e.offsetY };
+      this.mouseKnown = true;
     });
     target.addEventListener("mousedown", (e) => {
       if (e.button === 0) this.mouseDown = true;
@@ -46,6 +49,11 @@ export class KeyboardController implements Controller {
       e.preventDefault();
     }, { passive: false });
     target.addEventListener("contextmenu", (e) => e.preventDefault());
+  }
+
+  /** Cursor position in screen (CSS) px, or null before the mouse has moved over the game. */
+  get cursor(): Vec2 | null {
+    return this.mouseKnown ? { ...this.mouseScreen } : null;
   }
 
   /** Drops queued taps, e.g. when taking control so old presses don't fire. */
