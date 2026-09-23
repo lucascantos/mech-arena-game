@@ -7,7 +7,7 @@ import type { Vec2 } from "../vec";
 export interface Legs {
   name: string;
   shortName: string;
-  /** HP the legs contribute (durability). */
+  /** HP the legs contribute (durability); added to the torso's HP. */
   hp: number;
   /** Bounding box. Heavier legs are bigger targets. */
   size: Vec2;
@@ -31,7 +31,7 @@ export interface Legs {
 export const BIPEDAL: Legs = {
   name: "Bipedal",
   shortName: "BIP",
-  hp: 300,
+  hp: 100,
   size: { x: 48, y: 48 },
   moveSpeed: 280,
   acceleration: 2400,
@@ -46,7 +46,7 @@ export const BIPEDAL: Legs = {
 export const QUADPOD: Legs = {
   name: "Quadpod",
   shortName: "QUAD",
-  hp: 340,
+  hp: 140,
   size: { x: 54, y: 54 },
   moveSpeed: 230,
   acceleration: 700,
@@ -61,7 +61,7 @@ export const QUADPOD: Legs = {
 export const TREADS: Legs = {
   name: "Treads",
   shortName: "TANK",
-  hp: 450,
+  hp: 250,
   size: { x: 62, y: 62 },
   moveSpeed: 170,
   acceleration: 1400,

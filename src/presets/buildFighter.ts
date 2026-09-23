@@ -12,10 +12,12 @@ export interface Placement {
   pos: Vec2;
 }
 
-/** Assembles a fighter from a preset. Every build gets a Dodge for now. */
+/**
+ * Assembles a fighter from a preset. Every build gets a Dodge for now.
+ * Throws if the preset has more weapons than its torso can carry.
+ */
 export function buildFighter(preset: MechPreset, at: Placement): Fighter {
-  return new Fighter({ ...at, name: preset.name, legs: preset.legs })
-    .equipWeapon(new Weapon(preset.weapon1))
-    .equipWeapon(new Weapon(preset.weapon2))
-    .setDefense(new Dodge());
+  const fighter = new Fighter({ ...at, name: preset.name, legs: preset.legs, torso: preset.torso });
+  for (const stats of preset.weapons) fighter.equipWeapon(new Weapon(stats));
+  return fighter.setDefense(new Dodge());
 }

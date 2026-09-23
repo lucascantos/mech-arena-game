@@ -1,35 +1,31 @@
 import { DuelBot } from "./ai/duelBot";
 import { KeyboardController } from "./client/keyboardController";
 import { startGameLoop } from "./client/gameLoop";
-import { buildFighter } from "./presets/buildFighter";
-import { findPreset, PRESETS } from "./presets/presets";
+import { spawnLineup } from "./presets/lineup";
+import { findPreset, type MechPreset } from "./presets/presets";
 import { Renderer } from "./render/renderer";
 import type { Controller } from "./sim/controller";
 import type { Input } from "./sim/input";
 import { Match } from "./sim/match";
 import { World } from "./sim/world";
 
+const DEFAULT_LINEUP = ["brawler", "artillery", "juggernaut", "skirmisher"];
+
 const canvas = document.getElementById("game") as HTMLCanvasElement;
 const renderer = new Renderer(canvas);
 const world = new World(1337);
 
-// Pick the matchup in the URL: ?red=brawler&blue=artillery (ids in presets.ts).
-const params = new URLSearchParams(location.search);
-const redPreset = findPreset(params.get("red")) ?? PRESETS[0];
-const bluePreset = findPreset(params.get("blue")) ?? PRESETS[1];
+// Pick the lineup in the URL: ?bots=brawler,artillery,juggernaut,skirmisher (ids in presets.ts).
+// Two ids make a duel; more make a free-for-all.
+const ids = new URLSearchParams(location.search).get("bots")?.split(",") ?? DEFAULT_LINEUP;
+const presets = ids.map((id) => findPreset(id.trim())).filter((p): p is MechPreset => !!p);
+const lineup = presets.length >= 2 ? presets : DEFAULT_LINEUP.map((id) => findPreset(id)!);
 
-const red = world.addFighter(
-  buildFighter(redPreset, { id: 1, team: 1, color: "#e5534b", pos: { x: 300, y: 400 } }),
-);
-const blue = world.addFighter(
-  buildFighter(bluePreset, { id: 2, team: 2, color: "#4c8ed9", pos: { x: 900, y: 400 } }),
-);
-
+const fighters = spawnLineup(world, lineup);
 const match = new Match(world);
-const bots = new Map<number, Controller>([
-  [red.id, new DuelBot(redPreset.personality, 1)],
-  [blue.id, new DuelBot(bluePreset.personality, 2)],
-]);
+const bots = new Map<number, Controller>(
+  fighters.map((f, i) => [f.id, new DuelBot(lineup[i].personality, i + 1)]),
+);
 const keyboard = new KeyboardController(canvas, renderer.camera);
 
 /** Fighter the human is currently driving (Tab toggles), or null to spectate. */
@@ -38,7 +34,7 @@ window.addEventListener("keydown", (e) => {
   if (e.code !== "Tab") return;
   e.preventDefault();
   keyboard.clearQueued();
-  possessedId = possessedId === null ? red.id : null;
+  possessedId = possessedId === null ? fighters[0].id : null;
 });
 
 startGameLoop(

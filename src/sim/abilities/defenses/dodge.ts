@@ -47,9 +47,9 @@ export class Dodge extends Defense {
     this.owner.vel = scale(this.dir, this.config.speed * this.owner.stats.dashSpeedMultiplier);
   }
 
-  /** Heavier legs take longer to recover from a dash. */
+  /** Heavier parts take longer to recover from a dash. */
   protected cooldownTicks(): number {
-    return Math.round(super.cooldownTicks() * this.owner.stats.dashCooldownMultiplier);
+    return Math.round(super.cooldownTicks() * this.owner.stats.cooldownMultiplier);
   }
 
   controlsMovement(): boolean {

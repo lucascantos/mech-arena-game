@@ -74,7 +74,7 @@ function drawBars(ctx: CanvasRenderingContext2D, f: Fighter, x: number, y: numbe
   ctx.textAlign = "center";
   ctx.fillStyle = UI.text;
   ctx.font = "12px system-ui, sans-serif";
-  ctx.fillText(`${f.name} · ${f.legs.name}`, x + w / 2, y - 18);
+  ctx.fillText(`${f.name} · ${f.parts.legs.shortName}/${f.parts.torso.shortName}`, x + w / 2, y - 18);
 
   // Weapon + ammo, or a reload bar.
   const weapon = f.weapon;

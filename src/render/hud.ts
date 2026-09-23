@@ -18,16 +18,17 @@ export function drawHud(
   height: number,
 ): void {
   ctx.font = "13px ui-monospace, Consolas, monospace";
-  ctx.textAlign = "left";
+  ctx.font = "11px ui-monospace, Consolas, monospace";
+  ctx.textAlign = "right";
   ctx.fillStyle = UI.muted;
-  ctx.fillText(`tick ${world.tick}   ${hud.fps.toFixed(0)} fps`, 12, 20);
+  ctx.fillText(`tick ${world.tick}  ${hud.fps.toFixed(0)} fps`, width - 12, height - 14);
 
   drawScore(ctx, world, match, width);
   if (hud.possessed) drawLoadout(ctx, hud.possessed, height);
 
   const status = hud.possessed
     ? `Controlling ${hud.possessed.name}.  WASD move · Space dodge · Click fire · 1-4/wheel switch · R reload · Tab release`
-    : `Spectating bot duel.  Tab to take control of ${world.fighters[0]?.name ?? "a fighter"}`;
+    : `Spectating bots.  Tab to take control of ${world.fighters[0]?.name ?? "a fighter"}`;
   ctx.font = "13px ui-monospace, Consolas, monospace";
   ctx.textAlign = "center";
   ctx.fillStyle = UI.text;
@@ -35,13 +36,23 @@ export function drawHud(
 }
 
 function drawScore(ctx: CanvasRenderingContext2D, world: World, match: Match, width: number): void {
+  // One colored entry per team; eliminated fighters are dimmed.
   const teams = [...match.scores.keys()];
   const leaders = teams.map((t) => world.fighters.find((f) => f.team === t)!);
-  const parts = leaders.map((f) => `${f.name} ${match.scores.get(f.team)}`);
+  const gap = 36;
   ctx.font = "bold 18px system-ui, sans-serif";
+  ctx.textAlign = "left";
+  const labels = leaders.map((f) => `${f.name} ${match.scores.get(f.team)}`);
+  const widths = labels.map((l) => ctx.measureText(l).width);
+  let x = width / 2 - (widths.reduce((a, b) => a + b, 0) + gap * (labels.length - 1)) / 2;
+  leaders.forEach((f, i) => {
+    ctx.globalAlpha = f.alive ? 1 : 0.35;
+    ctx.fillStyle = f.color;
+    ctx.fillText(labels[i], x, 26);
+    x += widths[i] + gap;
+  });
+  ctx.globalAlpha = 1;
   ctx.textAlign = "center";
-  ctx.fillStyle = UI.text;
-  ctx.fillText(parts.join("   —   "), width / 2, 26);
 
   if (match.roundOver) {
     const winner = world.fighters.find((f) => f.team === match.lastWinner);

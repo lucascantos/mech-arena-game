@@ -3,7 +3,8 @@ import type { Defense } from "./abilities/defense";
 import { DT } from "./constants";
 import type { Input } from "./input";
 import { BIPEDAL, type Legs } from "./parts/legs";
-import { computeStats, type FighterStats } from "./parts/stats";
+import { computeStats, type FighterStats, type Parts } from "./parts/stats";
+import { MEDIUM_TORSO, type Torso } from "./parts/torso";
 import type { Weapon } from "./weapons/weapon";
 import type { World } from "./world";
 import { add, approach, clampUnit, normalize, rotateToward, scale, vec, type Vec2 } from "./vec";
@@ -19,6 +20,7 @@ export interface FighterConfig {
   color: string;
   pos: Vec2;
   legs?: Legs;
+  torso?: Torso;
 }
 
 export class Fighter {
@@ -28,9 +30,9 @@ export class Fighter {
   readonly color: string;
   readonly spawn: Vec2;
 
-  legs: Legs;
-  /** Final numbers from all parts. Recomputed whenever a part changes. */
-  stats: FighterStats;
+  readonly parts: Parts;
+  /** Final numbers from all parts. */
+  readonly stats: FighterStats;
 
   /** Center of the bounding box. */
   pos: Vec2;
@@ -52,8 +54,8 @@ export class Fighter {
     this.name = config.name;
     this.team = config.team;
     this.color = config.color;
-    this.legs = config.legs ?? BIPEDAL;
-    this.stats = computeStats({ legs: this.legs });
+    this.parts = { legs: config.legs ?? BIPEDAL, torso: config.torso ?? MEDIUM_TORSO };
+    this.stats = computeStats(this.parts);
     this.hp = this.stats.maxHp;
     this.spawn = { ...config.pos };
     this.pos = { ...config.pos };
@@ -68,14 +70,11 @@ export class Fighter {
     return this.stats.maxHp;
   }
 
-  setLegs(legs: Legs): this {
-    this.legs = legs;
-    this.stats = computeStats({ legs });
-    this.hp = Math.min(this.hp, this.stats.maxHp);
-    return this;
-  }
-
+  /** Throws if the torso can't carry another weapon. */
   equipWeapon(weapon: Weapon): this {
+    if (this.weapons.length >= this.stats.weaponCapacity) {
+      throw new Error(`${this.name}: ${this.parts.torso.name} torso carries at most ${this.stats.weaponCapacity} weapon(s)`);
+    }
     this.weapons.push(weapon);
     return this;
   }
