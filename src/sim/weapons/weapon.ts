@@ -77,22 +77,14 @@ export class Weapon {
       return;
     }
 
-    // Heavy weapon on legs that can't fire it on the move: plant first, the shot comes after the windup.
-    if (this.stats.brace && !owner.stats.firesOnTheMove) {
-      owner.startBrace(this);
-      return;
-    }
-    this.discharge(owner, world);
-  }
-
-  /** Fires one shot now and pays for it: ammo, fire-rate cooldown, recoil. */
-  discharge(owner: Fighter, world: World): void {
     this.fire(owner, world);
     this.ammo--;
     this.shotCooldown = Math.max(1, secondsToTicks(1 / this.stats.fireRate));
     const kick = this.stats.recoil * owner.stats.recoilMultiplier; // stable legs kick less
     this.bloom = Math.min(this.stats.maxRecoil, this.bloom + kick);
     if (this.ammo === 0) this.startReload();
+    // Heavy weapon on legs that can't absorb it on the move: the shot is out, now recover.
+    if (this.stats.brace && !owner.stats.firesOnTheMove) owner.startBrace(this);
   }
 
   /** Spawns `pellets` projectiles spread randomly within the current cone. */

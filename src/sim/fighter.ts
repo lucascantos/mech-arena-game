@@ -49,7 +49,7 @@ export class Fighter {
   readonly weapons: Weapon[] = [];
   weaponSlot = 0;
   defense: Defense | null = null;
-  /** Set while planted to fire a heavy weapon. */
+  /** Set while recovering from a heavy weapon's self-stagger. */
   brace: Brace | null = null;
 
   constructor(config: FighterConfig) {
@@ -116,7 +116,7 @@ export class Fighter {
     return this.alive && !this.brace && !this.abilities.some((a) => a.blocksActions());
   }
 
-  /** Called by a heavy weapon when fired on legs that must brace. Stops dead. */
+  /** Called by a heavy weapon right after firing on legs that must brace. Stops dead. */
   startBrace(weapon: Weapon): void {
     this.brace = new Brace(weapon);
     this.vel = vec();
@@ -154,12 +154,10 @@ export class Fighter {
       return;
     }
     const aim = normalize(vec(input.aimX, input.aimY));
-    if (aim.x !== 0 || aim.y !== 0) {
+    if (!this.brace && (aim.x !== 0 || aim.y !== 0)) {
       this.facing = rotateToward(this.facing, aim, this.stats.turnRate * DEG * DT);
     }
 
-    // Dodging out of a brace windup cancels the shot (no ammo spent).
-    if (input.defend && this.brace?.cancellable && this.defense?.isReady) this.brace = null;
     if (input.defend) this.defense?.tryActivate(input, world);
     if (!this.brace) {
       if (input.selectSlot >= 0) this.selectWeapon(input.selectSlot);
@@ -180,7 +178,7 @@ export class Fighter {
     this.prevPos = { ...this.pos };
     for (const ability of this.abilities) ability.update(world);
     this.weapon?.update();
-    if (this.brace && (!this.alive || !this.brace.update(this, world))) this.brace = null;
+    if (this.brace && (!this.alive || !this.brace.update())) this.brace = null;
     this.pos = add(this.pos, scale(add(this.vel, this.knockback), DT));
     this.knockback = scale(this.knockback, Math.exp(-KNOCKBACK_DECAY * DT));
   }

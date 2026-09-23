@@ -43,8 +43,9 @@ export interface WeaponStats {
   /** Explosion radius; 0 means no explosion. */
   blastRadius: number;
   /**
-   * Heavy weapons: on legs that can't fire on the move, firing roots the mech
-   * for `windup` seconds before the shot and `recovery` seconds after.
+   * Heavy weapons: on legs that can't fire on the move, the shot fires
+   * instantly and then the mech self-staggers (rooted, can't act) for
+   * `recovery` seconds.
    */
-  brace?: { windup: number; recovery: number };
+  brace?: { recovery: number };
 }
