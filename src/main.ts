@@ -6,7 +6,7 @@ import { Session } from "./modes/session";
 import { ClientSession } from "./net/clientSession";
 import { HostLobby } from "./net/hostSession";
 import type { Link } from "./net/link";
-import { hostRoom, joinRoom } from "./net/peerLink";
+import { hostRoom, joinRoom, type JoinFailure } from "./net/peerLink";
 import type { HostMessage } from "./net/protocol";
 import { findPreset, type MechPreset } from "./presets/presets";
 import { Renderer } from "./render/renderer";
@@ -14,6 +14,13 @@ import { Renderer } from "./render/renderer";
 const canvas = document.getElementById("game") as HTMLCanvasElement;
 const renderer = new Renderer(canvas);
 const keyboard = new KeyboardController(canvas, renderer.camera);
+
+const JOIN_ERRORS: Record<JoinFailure, string> = {
+  "no-room": "No room with that code. Check it, and that the host still has the Host screen open.",
+  network: "Found the room, but your networks blocked the connection (strict router or firewall).",
+  timeout: "The host didn't answer in time. Their network may be blocking connections.",
+  broker: "Couldn't reach the matchmaking service. Check your internet connection.",
+};
 
 /** The running game, or null while the menu is open. */
 let game: Game | null = null;
@@ -80,7 +87,7 @@ const menu = new Menu({
         });
         link.onClose(() => pendingLink === link && menu.setStatus("The host closed the room."));
       })
-      .catch(() => menu.setStatus("Couldn't reach that room. Check the code."));
+      .catch((why: JoinFailure) => menu.setStatus(JOIN_ERRORS[why] ?? JOIN_ERRORS.network));
   },
   leaveOnline,
 });
