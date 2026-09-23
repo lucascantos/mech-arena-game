@@ -1,13 +1,13 @@
 /**
- * Damage type. Right now only "explosive" behaves differently (it explodes);
- * bullet vs energy will matter once armor has per-type resistances.
+ * Damage type, for armor resistances later. How a shot behaves (exploding,
+ * homing) comes from the weapon's class, not from this.
  */
 export type DamageType = "bullet" | "energy" | "explosive";
 
 /** auto: fires while held. semi: one shot per click. */
 export type FireMode = "auto" | "semi";
 
-/** Everything that defines a weapon's behavior. Pure data so it's easy to tune. */
+/** The numbers every weapon has. Weapon subclasses extend this with their own (e.g. ExplosiveWeaponStats). */
 export interface WeaponStats {
   name: string;
   /** Short label for the HUD. */
@@ -36,16 +36,13 @@ export interface WeaponStats {
   projectileSpeed: number;
   /** Size of the projectile's bounding box (square). */
   projectileSize: number;
-  /** Distance before the projectile expires (explosives detonate there). */
+  /** Distance before the projectile expires. */
   range: number;
   /** Push applied to whoever gets hit, in units per second. */
   knockback: number;
-  /** Explosion radius; 0 means no explosion. */
-  blastRadius: number;
   /**
-   * Heavy weapons: on legs that can't fire on the move, the shot fires
-   * instantly and then the mech self-staggers (rooted, can't act) for
-   * `recovery` seconds.
+   * Seconds the shooter is rooted after each shot (can't move, turn, shoot or
+   * dodge) when their legs can't fire on the move. 0 for most weapons.
    */
-  brace?: { recovery: number };
+  selfStagger: number;
 }

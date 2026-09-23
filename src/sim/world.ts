@@ -1,8 +1,8 @@
 import { ARENA_HEIGHT, ARENA_WIDTH } from "./constants";
 import type { Fighter } from "./fighter";
 import { emptyInput, type Input } from "./input";
-import type { Projectile, ProjectileSpec, WorldEvent } from "./projectile";
-import { stepProjectiles } from "./projectiles";
+import type { WorldEvent } from "./events";
+import type { Projectile } from "./projectiles/projectile";
 import { Rng } from "./rng";
 
 /**
@@ -34,10 +34,13 @@ export class World {
     return this.fighters.find((f) => f.id === id);
   }
 
-  spawnProjectile(spec: ProjectileSpec): Projectile {
-    const p: Projectile = { ...spec, pos: { ...spec.pos }, id: this.nextId++, prevPos: { ...spec.pos }, alive: true };
+  /** Unique id for a new entity (projectiles for now). */
+  nextEntityId(): number {
+    return this.nextId++;
+  }
+
+  addProjectile(p: Projectile): void {
     this.projectiles.push(p);
-    return p;
   }
 
   emit(event: WorldEvent): void {
@@ -49,7 +52,8 @@ export class World {
     this.events = [];
     for (const f of this.fighters) f.applyInput(inputs.get(f.id) ?? emptyInput(), this);
     for (const f of this.fighters) f.update(this);
-    stepProjectiles(this);
+    for (const p of this.projectiles) p.update(this);
+    this.projectiles = this.projectiles.filter((p) => p.alive);
     this.separateFighters();
     for (const f of this.fighters) this.keepInArena(f);
     this.tick++;

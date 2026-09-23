@@ -1,6 +1,7 @@
 import { DT, secondsToTicks } from "../constants";
 import type { Fighter } from "../fighter";
 import { add, scale, vec } from "../vec";
+import { Projectile, type ProjectileSpec } from "../projectiles/projectile";
 import type { World } from "../world";
 import type { WeaponStats } from "./weaponStats";
 
@@ -9,11 +10,12 @@ const DEG = Math.PI / 180;
 /**
  * An equippable weapon. Any fighter can carry any weapon.
  *
- * Handles ammo, fire rate, reloading and recoil bloom. How the shot is
- * delivered lives in `fire()`: the default spawns projectiles. Weapons that
- * work differently (hitscan laser, homing missiles, melee) override it.
+ * Handles ammo, fire rate, reloading and recoil bloom, and fires plain
+ * bullets. Subclasses change what gets fired by overriding
+ * `createProjectile` (ExplosiveWeapon → Rocket, HomingWeapon → Missile) or
+ * the whole shot by overriding `fire` (hitscan laser, melee later).
  */
-export class Weapon {
+export class Weapon<S extends WeaponStats = WeaponStats> {
   ammo: number;
   private shotCooldown = 0;
   private reloadLeft = 0;
@@ -21,7 +23,7 @@ export class Weapon {
   private bloom = 0;
   private triggerWasHeld = false;
 
-  constructor(readonly stats: WeaponStats) {
+  constructor(readonly stats: S) {
     this.ammo = stats.magazine;
   }
 
@@ -84,7 +86,7 @@ export class Weapon {
     this.bloom = Math.min(this.stats.maxRecoil, this.bloom + kick);
     if (this.ammo === 0) this.startReload();
     // Heavy weapon on legs that can't absorb it on the move: the shot is out, now recover.
-    if (this.stats.brace && !owner.stats.firesOnTheMove) owner.startBrace(this);
+    if (this.stats.selfStagger > 0 && !owner.stats.firesOnTheMove) owner.startBrace(this);
   }
 
   /** Spawns `pellets` projectiles spread randomly within the current cone. */
@@ -98,18 +100,24 @@ export class Weapon {
     for (let i = 0; i < s.pellets; i++) {
       const angle = baseAngle + world.rng.range(-half, half);
       const dir = vec(Math.cos(angle), Math.sin(angle));
-      world.spawnProjectile({
-        ownerId: owner.id,
-        team: owner.team,
-        pos: muzzle,
-        vel: scale(dir, s.projectileSpeed),
-        size: s.projectileSize,
-        damage: s.damage,
-        damageType: s.damageType,
-        knockback: s.knockback,
-        blastRadius: s.blastRadius,
-        rangeLeft: s.range,
-      });
+      world.addProjectile(
+        this.createProjectile(world, {
+          ownerId: owner.id,
+          team: owner.team,
+          pos: muzzle,
+          vel: scale(dir, s.projectileSpeed),
+          size: s.projectileSize,
+          damage: s.damage,
+          damageType: s.damageType,
+          knockback: s.knockback,
+          range: s.range,
+        }),
+      );
     }
+  }
+
+  /** Builds one projectile for a shot. A plain bullet here; subclasses fire rockets, missiles... */
+  protected createProjectile(world: World, spec: ProjectileSpec): Projectile {
+    return new Projectile(world, spec);
   }
 }

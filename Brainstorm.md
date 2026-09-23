@@ -10,13 +10,14 @@ A living list of ideas. Nothing here is decided unless it's under **Decisions so
 - **Controls:** WASD to move, Space to dodge, click to attack, mouse to aim.
 - **Stack:** TypeScript, Vite and Canvas 2D. No game engine.
 - **Netcode direction:** the game logic in `src/sim/` is deterministic and runs on fixed ticks. Humans, bots and (later) remote players all feed the same `Input`, so an authoritative server can reuse the sim.
-- **Weapons replace Attack.** `Weapon` holds stats (damage, spread, recoil, reload, ammo, fire rate, type...) and any fighter can carry any weapon. How a shot is delivered is `Weapon.fire()`: the default spawns projectiles; laser, missiles and melee will be subclasses.
-- **Damage types:** Bullet, Energy, Explosive. Only Explosive behaves differently for now (area damage with falloff); Bullet vs Energy will matter through armor resistances.
+- **Weapons are a class hierarchy, not data flags.** `Weapon` holds what every weapon has (damage, spread, recoil, reload, ammo, fire rate, range, knockback, self-stagger). `ExplosiveWeapon` adds blast radius and fuse and fires `Rocket`s. `HomingWeapon` adds a `Guidance` object and fires `Missile`s. Concrete weapons are small classes (`MachineGun`, `Shotgun`, `EnergyRifle`, `RocketLauncher`, `MissileLauncher`); presets list the classes.
+- **Projectiles are classes too:** `Projectile` (straight bullet) → `Rocket` (explodes on contact, wall, range or fuse) → `Missile` (holds its own target, steers with its launcher's `Guidance`). `Guidance` = lock cone + turn rate; other turn feels are subclasses overriding `steer`.
+- **Damage types:** Bullet, Energy, Explosive, for armor resistances later. Behavior (exploding, homing) comes from the weapon's class, not the damage type.
 - **Recoil = spread bloom** (grows per shot, recovers over time). Leg stability should reduce it later.
 - **Defense** stays its own class hierarchy. There will be many types.
 - **Parts → stats.** A fighter's numbers (HP, size, speed, acceleration, turn rate, recoil/knockback multipliers, dash speed/cooldown multipliers) are computed from its parts in `computeStats()`. Legs are the first part: Bipedal, Quadpod, Treads. Torso/head/arms plug into the same function.
 - **Torso** (Light / Medium / Heavy): HP (added to legs HP), weapon capacity (1 / 2 / 3), speed multiplier (weight), defense cooldown multiplier, hitbox size bonus.
-- **Bracing** (self-stagger): weapons with `brace` (Rocket Launcher) fire instantly, then legs without `firesOnTheMove` (Bipedal) are rooted and can't act (move, turn, shoot, dodge) for `recovery` seconds. Quadpod and Treads fire heavy weapons on the move.
+- **Bracing** (self-stagger): every weapon has `selfStagger` seconds (0 for most; launchers 0.6). After firing, legs without `firesOnTheMove` (Bipedal) are rooted and can't act (move, turn, shoot, dodge) for that long. Quadpod and Treads fire on the move.
 - **Presets.** Builds are named presets (`src/presets/presets.ts`): name, legs, torso, weapons (up to capacity), plus an AI personality for when a bot drives it. New part slots get added as fields.
 - **First defense:** `Dodge` (a dash with invulnerability frames and a cooldown).
 - **First scene:** two bots dueling. Tab lets you take control of one.

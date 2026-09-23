@@ -1,6 +1,7 @@
 import type { Fighter } from "../sim/fighter";
 import type { Rng } from "../sim/rng";
 import { add, dist, normalize, scale, sub, vec, type Vec2 } from "../sim/vec";
+import { HomingWeapon } from "../sim/weapons/homingWeapon";
 import type { Weapon } from "../sim/weapons/weapon";
 import type { Personality } from "./personality";
 
@@ -37,7 +38,9 @@ export class Gunner {
     const weapon = self.weapon;
     const speed = weapon?.stats.projectileSpeed ?? 1000;
     const travel = dist(self.pos, target.pos) / speed;
-    const lead = scale(add(target.vel, target.knockback), travel * this.personality.leadSkill);
+    // Homing missiles steer themselves: aim straight at the target so the lock picks it.
+    const leadSkill = weapon instanceof HomingWeapon ? 0 : this.personality.leadSkill;
+    const lead = scale(add(target.vel, target.knockback), travel * leadSkill);
     const dir = normalize(sub(add(target.pos, lead), self.pos));
 
     if (--this.aimTicks <= 0) {

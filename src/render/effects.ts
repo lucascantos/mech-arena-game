@@ -1,4 +1,4 @@
-import type { WorldEvent } from "../sim/projectile";
+import type { WorldEvent } from "../sim/events";
 import type { Vec2 } from "../sim/vec";
 import { DAMAGE_COLORS, UI } from "./palette";
 

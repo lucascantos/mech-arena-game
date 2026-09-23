@@ -11,7 +11,7 @@ export class Brace {
   private readonly totalTicks: number;
 
   constructor(readonly weapon: Weapon) {
-    this.totalTicks = Math.max(1, secondsToTicks(weapon.stats.brace!.recovery));
+    this.totalTicks = Math.max(1, secondsToTicks(weapon.stats.selfStagger));
     this.ticksLeft = this.totalTicks;
   }
 

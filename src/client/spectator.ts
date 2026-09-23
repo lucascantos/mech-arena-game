@@ -1,5 +1,5 @@
 import type { Fighter } from "../sim/fighter";
-import type { WorldEvent } from "../sim/projectile";
+import type { WorldEvent } from "../sim/events";
 import { dist } from "../sim/vec";
 import type { World } from "../sim/world";
 

@@ -70,7 +70,7 @@ export class ThreatSense {
 
       this.seen.add(p.id);
       const side = rel.x * dir.y - rel.y * dir.x; // signed miss distance
-      const margin = self.size.x / 2 + p.size / 2 + p.blastRadius + 8;
+      const margin = self.size.x / 2 + p.threatRadius + 8;
       if (Math.abs(side) > margin) continue;
 
       // Dodge sideways, away from the projectile's line.

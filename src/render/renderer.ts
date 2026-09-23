@@ -8,6 +8,9 @@ import { drawFighter } from "./fighterView";
 import { drawHud, type HudInfo } from "./hud";
 import { UI } from "./palette";
 import { drawProjectiles } from "./projectileView";
+import { drawMinimap } from "./minimap";
+import { Radar } from "./radar";
+import { drawRadarArrows } from "./radarArrows";
 
 const GRID = 50;
 
@@ -18,6 +21,7 @@ const GRID = 50;
 export class Renderer {
   readonly camera = new Camera();
   readonly effects = new Effects();
+  private readonly radar = new Radar();
   private readonly ctx: CanvasRenderingContext2D;
   private cssWidth = 0;
   private cssHeight = 0;
@@ -47,10 +51,15 @@ export class Renderer {
     this.camera.apply(ctx);
     this.drawArena(world);
     for (const f of world.fighters) drawFighter(ctx, f, alpha);
-    drawProjectiles(ctx, world.projectiles, alpha);
+    drawProjectiles(ctx, world, alpha);
     this.effects.draw(ctx);
     ctx.restore();
 
+    if (this.camera.mode === "follow" && focus) {
+      this.radar.update(world, focus);
+      drawMinimap(ctx, world, this.radar, this.camera, focus, this.cssWidth, this.cssHeight);
+      drawRadarArrows(ctx, world, this.radar, this.camera, this.cssWidth, this.cssHeight);
+    }
     drawHud(ctx, world, match, hud, this.cssWidth, this.cssHeight);
   }
 

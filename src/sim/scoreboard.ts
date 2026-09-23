@@ -1,4 +1,4 @@
-import type { WorldEvent } from "./projectile";
+import type { WorldEvent } from "./events";
 import type { World } from "./world";
 
 export interface FighterRecord {
