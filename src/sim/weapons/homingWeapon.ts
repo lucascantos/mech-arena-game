@@ -13,7 +13,8 @@ const LOCK_RANGE_FACTOR = 1.5;
  * (via its Guidance); every missile from that shot then chases it on its own.
  */
 export class HomingWeapon extends ExplosiveWeapon {
-  private lockedTarget: number | undefined;
+  /** Target of the missile being built (set per shot, or per missile by subclasses). */
+  protected lockedTarget: number | undefined;
 
   constructor(
     stats: ExplosiveWeaponStats,

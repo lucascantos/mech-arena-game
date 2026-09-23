@@ -1,4 +1,5 @@
-import { CRIT_MULTIPLIER, DT } from "../constants";
+import { DT } from "../constants";
+import { dealDamage } from "../damage";
 import type { Fighter } from "../fighter";
 import { segmentHitsBox } from "../geometry";
 import { add, length, lerp, normalize, scale, type Vec2 } from "../vec";
@@ -81,6 +82,11 @@ export class Projectile {
     return this.size / 2;
   }
 
+  /** Puts the shot into play. Travels through the world by default; a Beam resolves instantly instead. */
+  launch(world: World): void {
+    world.addProjectile(this);
+  }
+
   /** Moves one tick and resolves hits, walls and expiry. */
   update(world: World): void {
     this.prevPos = this.pos;
@@ -134,17 +140,18 @@ export class Projectile {
    * returns the damage actually dealt.
    */
   protected hit(world: World, f: Fighter, damage: number, dir: Vec2, knockback: number, at: Vec2, crit: boolean): number {
-    const dealt = f.takeDamage(crit ? damage * CRIT_MULTIPLIER : damage);
-    if (dealt <= 0) return 0;
-    f.applyKnockback(scale(dir, knockback));
-    world.emit({ kind: "damage", targetId: f.id, sourceId: this.ownerId, amount: dealt, pos: at, crit });
-    if (!f.alive) world.emit({ kind: "kill", victimId: f.id, killerId: this.ownerId });
-    return dealt;
+    return dealDamage(world, f, this.ownerId, damage, dir, knockback, at, crit);
+  }
+
+  /** False for shots that fly over fighters (grenades) and only end at range. */
+  protected get hitsFighters(): boolean {
+    return true;
   }
 
   /** Closest enemy along this tick's path. Invulnerable fighters are passed through. */
   private firstFighterHit(world: World, to: Vec2): { fighter: Fighter; t: number } | null {
     let best: { fighter: Fighter; t: number } | null = null;
+    if (!this.hitsFighters) return null;
     const pad = this.size / 2;
     for (const f of world.fighters) {
       if (!f.alive || f.team === this.team || f.invulnerable) continue;

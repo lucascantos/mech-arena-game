@@ -6,6 +6,7 @@ export class MachineGun extends Weapon {
     super({
       name: "Machine Gun",
       shortName: "MG",
+      mount: "hand",
       damageType: "bullet",
       damage: 4,
       fireMode: "auto",
@@ -35,6 +36,7 @@ export class Shotgun extends Weapon {
     super({
       name: "Shotgun",
       shortName: "SG",
+      mount: "hand",
       damageType: "bullet",
       damage: 6,
       fireMode: "semi",
@@ -64,6 +66,7 @@ export class EnergyRifle extends Weapon {
     super({
       name: "Energy Rifle",
       shortName: "ER",
+      mount: "hand",
       damageType: "energy",
       damage: 14,
       fireMode: "semi",

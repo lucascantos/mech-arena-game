@@ -88,12 +88,13 @@ export class LockOn {
    * Your input with its aim replaced by a lead on the locked target: most of
    * the way (LEAD) toward where your shot would meet it given its current
    * movement (knockback drift included) and your weapon's projectile speed.
-   * Homing weapons aim straight at it, since their missiles steer. Unchanged
-   * without a lock.
+   * Homing weapons aim straight at it, since their missiles steer. Also
+   * tells the sim who is locked (a sword lunges at it). Unchanged without a lock.
    */
   aim(world: World, self: Fighter, input: Input): Input {
     const target = this.targetId === null ? undefined : world.getFighter(this.targetId);
     if (!target?.alive) return input;
+    input = { ...input, target: target.id };
     const weapon = self.weapon;
     const point =
       !weapon || weapon instanceof HomingWeapon

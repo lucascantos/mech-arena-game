@@ -1,13 +1,16 @@
 import type { Ability } from "./abilities/ability";
+import type { BackUnit } from "./back/backUnit";
 import type { Defense } from "./abilities/defense";
-import { Brace } from "./brace";
+import type { Brace } from "./brace";
 import { DT } from "./constants";
+import { Loadout } from "./loadout";
 import { Stamina } from "./stamina";
 import type { Input } from "./input";
-import { STANDARD_HEAD, type Head } from "./parts/head";
-import { BIPEDAL, type Legs } from "./parts/legs";
+import type { FighterConfig } from "./fighterConfig";
+import { STANDARD_HEAD } from "./parts/head";
+import { BIPEDAL } from "./parts/legs";
 import { computeStats, type FighterStats, type Parts } from "./parts/stats";
-import { MEDIUM_TORSO, type Torso } from "./parts/torso";
+import { MEDIUM_TORSO } from "./parts/torso";
 import type { Weapon } from "./weapons/weapon";
 import type { World } from "./world";
 import { add, approach, clampUnit, normalize, rotateToward, scale, vec, type Vec2 } from "./vec";
@@ -16,16 +19,7 @@ import { add, approach, clampUnit, normalize, rotateToward, scale, vec, type Vec
 const KNOCKBACK_DECAY = 8;
 const DEG = Math.PI / 180;
 
-export interface FighterConfig {
-  id: number;
-  name: string;
-  team: number;
-  color: string;
-  pos: Vec2;
-  legs?: Legs;
-  torso?: Torso;
-  head?: Head;
-}
+export type { FighterConfig };
 
 export class Fighter {
   readonly id: number;
@@ -48,10 +42,14 @@ export class Fighter {
   knockback: Vec2 = vec();
   /** Unit vector the fighter is aiming at. Turns toward the input aim at `turnRate`. */
   facing: Vec2 = vec(1, 0);
+  /** Length of the input aim (where a grenade lands) and the locked enemy's id or -1 (what a sword lunges at). */
+  aimDistance = 0;
+  lockTarget = -1;
   hp: number;
 
-  readonly weapons: Weapon[] = [];
-  weaponSlot = 0;
+  /** Main weapons and the back unit. */
+  readonly loadout = new Loadout();
+  readonly weapons: Weapon[] = this.loadout.weapons;
   defense: Defense | null = null;
   /** Spent by dashes (and future actions); refills over time. */
   readonly stamina: Stamina;
@@ -80,14 +78,26 @@ export class Fighter {
     return this.stats.maxHp;
   }
 
-  /** Throws if the torso can't carry another weapon. */
+  /** Hand weapons only; throws if the torso can't carry another. */
   equipWeapon(weapon: Weapon): this {
-    if (this.weapons.length >= this.stats.weaponCapacity) {
-      throw new Error(`${this.name}: ${this.parts.torso.name} torso carries at most ${this.stats.weaponCapacity} weapon(s)`);
-    }
-    this.weapons.push(weapon);
-    this.stats = computeStats(this.parts, this.weapons); // weapons add weight
+    this.loadout.equip(weapon, this.stats.weaponCapacity, `${this.name} (${this.parts.torso.name} torso)`);
+    return this.reweigh();
+  }
+
+  /** Puts a unit in the (single) back slot. */
+  setBackUnit(unit: BackUnit): this {
+    this.loadout.mountBack(unit);
+    return this.reweigh();
+  }
+
+  /** Everything carried adds weight. */
+  private reweigh(): this {
+    this.stats = computeStats(this.parts, this.loadout.carried);
     return this;
+  }
+
+  get back(): BackUnit | null {
+    return this.loadout.back;
   }
 
   setDefense(defense: Defense): this {
@@ -98,17 +108,12 @@ export class Fighter {
 
   /** The weapon in hand, if any. */
   get weapon(): Weapon | undefined {
-    return this.weapons[this.weaponSlot];
+    return this.loadout.weapon;
   }
 
-  selectWeapon(slot: number): void {
-    if (slot === this.weaponSlot || slot < 0 || slot >= this.weapons.length) return;
-    this.weapon?.holster();
-    this.weaponSlot = slot;
-  }
-
+  /** The defense plus any ability the gear brings (a sword's lunge). */
   get abilities(): Ability[] {
-    return this.defense ? [this.defense] : [];
+    return this.defense ? [this.defense, ...this.loadout.abilities] : this.loadout.abilities;
   }
 
   get alive(): boolean {
@@ -124,15 +129,14 @@ export class Fighter {
     return this.alive && !this.brace && !this.abilities.some((a) => a.blocksActions());
   }
 
-  /** Called by a heavy weapon right after firing on legs that must brace. Stops dead. */
-  startBrace(weapon: Weapon): void {
-    this.brace = new Brace(weapon);
-    this.vel = vec();
-  }
-
-  /** Returns the damage actually dealt (0 if invulnerable or dead). */
-  takeDamage(amount: number): number {
+  /**
+   * Returns the damage actually dealt (0 if invulnerable or dead). `dir` is
+   * the way the damage travels; a raised shield can soak it from the front.
+   */
+  takeDamage(amount: number, dir?: Vec2): number {
     if (!this.alive || this.invulnerable) return 0;
+    if (dir && this.back) amount = this.back.absorb(this, dir, amount);
+    if (amount <= 0) return 0;
     const dealt = Math.min(this.hp, amount);
     this.hp -= dealt;
     return dealt;
@@ -151,8 +155,7 @@ export class Fighter {
     this.knockback = vec();
     this.brace = null;
     this.stamina.refill();
-    this.weaponSlot = 0;
-    for (const w of this.weapons) w.reset();
+    this.loadout.reset();
     for (const a of this.abilities) a.reset();
   }
 
@@ -163,21 +166,20 @@ export class Fighter {
       return;
     }
     const aim = normalize(vec(input.aimX, input.aimY));
+    this.aimDistance = Math.hypot(input.aimX, input.aimY);
+    this.lockTarget = input.target;
     if (!this.brace && (aim.x !== 0 || aim.y !== 0)) {
       this.facing = rotateToward(this.facing, aim, this.stats.turnRate * DEG * DT);
     }
 
     if (input.defend) this.defense?.tryActivate(input, world);
-    if (!this.brace) {
-      if (input.selectSlot >= 0) this.selectWeapon(input.selectSlot);
-      if (input.reload) this.weapon?.startReload();
-      this.weapon?.trigger(input.fire && this.canAct(), this, world);
-    }
+    if (!this.brace) this.loadout.handleInput(input, this, world);
 
     if (this.brace) {
       this.vel = vec(); // rooted; only knockback can move a braced mech
     } else if (!this.abilities.some((a) => a.controlsMovement())) {
-      const desired = scale(clampUnit(vec(input.moveX, input.moveY)), this.stats.moveSpeed);
+      const speed = this.stats.moveSpeed * this.loadout.moveMultiplier;
+      const desired = scale(clampUnit(vec(input.moveX, input.moveY)), speed);
       this.vel = approach(this.vel, desired, this.stats.acceleration * DT);
     }
   }
@@ -187,7 +189,7 @@ export class Fighter {
     this.prevPos = { ...this.pos };
     for (const ability of this.abilities) ability.update(world);
     if (this.alive) this.stamina.update(this.stats.staminaRegen);
-    this.weapon?.update();
+    this.loadout.update(this);
     if (this.brace && (!this.alive || !this.brace.update())) this.brace = null;
     this.pos = add(this.pos, scale(add(this.vel, this.knockback), DT));
     this.knockback = scale(this.knockback, Math.exp(-KNOCKBACK_DECAY * DT));

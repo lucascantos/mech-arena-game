@@ -4,6 +4,9 @@
  */
 export type DamageType = "bullet" | "energy" | "explosive";
 
+/** Where a weapon goes: in hand (left click, 1-4 to switch) or the single back slot (right click). */
+export type Mount = "hand" | "back";
+
 /** auto: fires while held. semi: one shot per click. */
 export type FireMode = "auto" | "semi";
 
@@ -12,6 +15,7 @@ export interface WeaponStats {
   name: string;
   /** Short label for the HUD. */
   shortName: string;
+  mount: Mount;
   damageType: DamageType;
   /** Damage per projectile (per pellet for shotguns). */
   damage: number;

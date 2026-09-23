@@ -1,5 +1,4 @@
 import type { Vec2 } from "../vec";
-import type { Weapon } from "../weapons/weapon";
 import type { Head } from "./head";
 import type { Legs } from "./legs";
 import type { Torso } from "./torso";
@@ -63,9 +62,10 @@ export function mobility(weight: number): number {
   return Math.min(MAX_MOBILITY, Math.max(MIN_MOBILITY, 1 + WEIGHT_SLOPE * (BASE_WEIGHT - weight)));
 }
 
-export function computeStats(parts: Parts, weapons: readonly Weapon[] = []): FighterStats {
+/** `carried`: weapons and back unit, each adding its weight. */
+export function computeStats(parts: Parts, carried: readonly { weight: number }[] = []): FighterStats {
   const { legs, torso, head } = parts;
-  const weight = torso.weight + head.weight + weapons.reduce((sum, w) => sum + w.stats.weight, 0);
+  const weight = torso.weight + head.weight + carried.reduce((sum, c) => sum + c.weight, 0);
   const move = mobility(weight);
   return {
     maxHp: legs.hp + torso.hp,

@@ -51,13 +51,13 @@ export function drawHud(
     ctx.font = "bold 12px ui-monospace, Consolas, monospace";
     ctx.textAlign = "left";
     ctx.fillStyle = hud.lockOnEnabled ? UI.hp : UI.muted;
-    ctx.fillText(hud.lockOnEnabled ? "LOCK-ON ON (Q)" : "LOCK-ON OFF (Q)", 12, height - 44 - hud.possessed.weapons.length * 18);
+    ctx.fillText(hud.lockOnEnabled ? "LOCK-ON ON (Q)" : "LOCK-ON OFF (Q)", 12, height - 62 - hud.possessed.weapons.length * 18);
   }
 
   const you = world.fighters[0];
   let status: string;
   if (hud.possessed?.alive) {
-    status = `Controlling ${hud.possessed.name}.  WASD move · Space dodge · Click fire · 1-4/wheel switch · R reload · Q lock-on · Tab stats · P release · V camera`;
+    status = `Controlling ${hud.possessed.name}.  WASD move · Space dodge · Click fire · Right-click back unit · 1-4/wheel switch · R reload · Q lock-on · Tab stats · P release · V camera`;
   } else if (you && !you.alive) {
     const by = hud.killer ? `Destroyed by ${hud.killer.name}` : "Destroyed";
     status = `${by}.  Spectating ${hud.following.name} until the next round · Tab stats`;
@@ -116,17 +116,22 @@ function drawScore(ctx: CanvasRenderingContext2D, world: World, match: MatchView
   }
 }
 
-/** Bottom-left list of the possessed fighter's weapons. */
+/** Bottom-left list of the possessed fighter's weapons, with the back unit under them. */
 function drawLoadout(ctx: CanvasRenderingContext2D, f: Fighter, height: number): void {
   ctx.font = "13px ui-monospace, Consolas, monospace";
   ctx.textAlign = "left";
   f.weapons.forEach((w, slot) => {
-    const y = height - 44 - (f.weapons.length - 1 - slot) * 18;
-    const active = slot === f.weaponSlot;
-    const state = w.isReloading ? `reloading ${Math.round(w.reloadProgress * 100)}%` : `${w.ammo}/${w.stats.magazine}`;
+    const y = height - 62 - (f.weapons.length - 1 - slot) * 18;
+    const active = slot === f.loadout.slot;
     ctx.fillStyle = DAMAGE_COLORS[w.stats.damageType];
     ctx.fillRect(12, y - 9, 8, 8);
     ctx.fillStyle = active ? UI.text : UI.muted;
-    ctx.fillText(`${active ? ">" : " "} [${slot + 1}] ${w.stats.name.padEnd(16)} ${state}`, 26, y);
+    ctx.fillText(`${active ? ">" : " "} [${slot + 1}] ${w.stats.name.padEnd(19)} ${w.status}`, 26, y);
   });
+  if (f.back) {
+    ctx.fillStyle = UI.defense;
+    ctx.fillRect(12, height - 53, 8, 8);
+    ctx.fillStyle = UI.text;
+    ctx.fillText(`  [RMB] ${f.back.name.padEnd(17)} ${f.back.status}`, 26, height - 44);
+  }
 }

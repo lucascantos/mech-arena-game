@@ -38,7 +38,7 @@ export class Rocket extends Projectile {
   protected impact(world: World, center: Vec2, _target: Fighter | null): void {
     this.alive = false;
     this.pos = center;
-    world.emit({ kind: "explosion", pos: center, radius: this.blastRadius });
+    world.emit({ kind: "explosion", pos: center, radius: this.blastRadius, damageType: this.damageType });
     const crit = this.rollCrit(world); // one roll for the whole blast
     let dealt = 0;
     for (const f of world.fighters) {

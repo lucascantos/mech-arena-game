@@ -53,10 +53,15 @@ export abstract class Ability {
   tryActivate(input: Input, world: World): boolean {
     if (!this.isReady || !this.owner.canAct()) return false;
     if (!this.canActivate(input, world)) return false;
-    this.activeLeft = this.timing.activeTicks;
-    this.elapsed = 0;
+    this.begin();
     this.onActivate(input, world);
     return true;
+  }
+
+  /** Enters the active phase. For abilities started by something other than input (e.g. a sword's lunge). */
+  protected begin(): void {
+    this.activeLeft = this.timing.activeTicks;
+    this.elapsed = 0;
   }
 
   /** Active-phase timers a joined player needs to mirror the host's copy. */

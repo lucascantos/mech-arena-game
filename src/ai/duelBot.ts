@@ -4,6 +4,7 @@ import { emptyInput, type Input } from "../sim/input";
 import { Rng } from "../sim/rng";
 import { add, dist, normalize, perp, scale, sub, vec, type Vec2 } from "../sim/vec";
 import type { World } from "../sim/world";
+import { BackBrain } from "./backBrain";
 import { Gunner } from "./gunner";
 import type { Personality } from "./personality";
 import { Senses } from "./senses";
@@ -27,6 +28,7 @@ const WALL_MARGIN = 120;
 export class DuelBot implements Controller {
   private readonly rng: Rng;
   private readonly gunner: Gunner;
+  private readonly backBrain: BackBrain;
   private readonly threats: ThreatSense;
   private readonly senses = new Senses();
   private mode: Mode = "circle";
@@ -36,6 +38,7 @@ export class DuelBot implements Controller {
   constructor(private readonly personality: Personality, seed: number) {
     this.rng = new Rng(seed);
     this.gunner = new Gunner(this.rng, personality);
+    this.backBrain = new BackBrain(this.rng);
     this.threats = new ThreatSense(this.rng, personality);
   }
 
@@ -65,9 +68,11 @@ export class DuelBot implements Controller {
     if (self.weapon?.isReloading) input.selectSlot = this.gunner.chooseSlot(self, range);
 
     const aim = this.gunner.aim(self, target);
-    input.aimX = aim.x;
-    input.aimY = aim.y;
+    input.aimX = aim.x * range; // aim at the target's distance too (grenades land there)
+    input.aimY = aim.y * range;
     input.fire = this.gunner.trigger(self, range);
+    input.back = this.backBrain.hold(self, target, range, preferred);
+    input.target = target.id; // bots "lock on" to what they fight (a sword lunges at it)
     input.reload = this.gunner.wantsReload(self, this.mode === "retreat");
 
     let move = normalize(add(this.steer(dir, range, preferred), this.wallAvoidance(self, world)));

@@ -1,7 +1,7 @@
 import type { WorldEvent } from "../sim/events";
 import type { Input } from "../sim/input";
 
-/** One fighter's state: [id, x, y, vx, vy, facingX, facingY, hp, weaponSlot, stamina, dash, braceTicksLeft (-1 = none), weapons]. */
+/** One fighter's state: [id, x, y, vx, vy, facingX, facingY, hp, weaponSlot, stamina, dash, braceTicksLeft (-1 = none), weapons, back unit]. */
 export type FighterState = [
   id: number,
   x: number,
@@ -15,7 +15,8 @@ export type FighterState = [
   stamina: number,
   dash: [activeLeft: number, elapsed: number],
   brace: number,
-  weapons: [ammo: number, reloadLeft: number, bloom: number][],
+  weapons: number[][],
+  back: number[],
 ];
 
 /** One projectile: [id, x, y, vx, vy, size, damageType (0 bullet, 1 energy, 2 explosive), targetId (-1 = none)]. */

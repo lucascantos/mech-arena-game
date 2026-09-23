@@ -20,5 +20,6 @@ export interface Placement {
 export function buildFighter(preset: MechPreset, at: Placement): Fighter {
   const fighter = new Fighter({ ...at, name: at.name ?? preset.name, legs: preset.legs, torso: preset.torso, head: preset.head });
   for (const WeaponType of preset.weapons) fighter.equipWeapon(new WeaponType());
+  fighter.setBackUnit(new preset.back());
   return fighter.setDefense(new Dodge());
 }

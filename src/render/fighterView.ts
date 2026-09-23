@@ -106,6 +106,6 @@ function drawPrivateBars(ctx: CanvasRenderingContext2D, f: Fighter, x: number, y
   } else {
     ctx.font = "11px ui-monospace, Consolas, monospace";
     ctx.fillStyle = UI.muted;
-    ctx.fillText(`${weapon.stats.shortName} ${weapon.ammo}/${weapon.stats.magazine}`, x + w / 2, labelY);
+    ctx.fillText(`${weapon.stats.shortName} ${weapon.status}`, x + w / 2, labelY);
   }
 }

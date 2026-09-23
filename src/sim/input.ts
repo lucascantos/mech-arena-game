@@ -11,12 +11,16 @@ export interface Input {
   aimY: number;
   /** Trigger of the equipped weapon is held. */
   fire: boolean;
+  /** Right mouse button held: uses the back unit. */
+  back: boolean;
   /** Start reloading the equipped weapon. */
   reload: boolean;
   /** Weapon slot to switch to this tick, or -1 to keep the current one. */
   selectSlot: number;
   /** Uses the defense ability (e.g. dodge). */
   defend: boolean;
+  /** Id of the enemy locked on to, or -1 (melee lunges at it). */
+  target: number;
 }
 
 export const emptyInput = (): Input => ({
@@ -25,7 +29,9 @@ export const emptyInput = (): Input => ({
   aimX: 0,
   aimY: 0,
   fire: false,
+  back: false,
   reload: false,
   selectSlot: -1,
   defend: false,
+  target: -1,
 });

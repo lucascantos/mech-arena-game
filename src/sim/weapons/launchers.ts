@@ -8,6 +8,7 @@ export class RocketLauncher extends ExplosiveWeapon {
     super({
       name: "Rocket Launcher",
       shortName: "RL",
+      mount: "hand",
       damageType: "explosive",
       damage: 30,
       fireMode: "semi",
@@ -35,7 +36,8 @@ export class RocketLauncher extends ExplosiveWeapon {
 
 /**
  * Homing missiles: lock the enemy nearest the aim (within ±30°), turn toward
- * it at 160°/s, explode on contact or after 2s. Heavy: bipedal legs self-stagger.
+ * it at 160°/s, explode on contact or after 2s. Back weapon. Heavy: bipedal
+ * legs self-stagger.
  */
 export class MissileLauncher extends HomingWeapon {
   constructor() {
@@ -43,6 +45,7 @@ export class MissileLauncher extends HomingWeapon {
       {
         name: "Missile Launcher",
         shortName: "ML",
+        mount: "back",
         damageType: "explosive",
         damage: 30,
         fireMode: "semi",

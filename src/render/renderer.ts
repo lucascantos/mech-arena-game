@@ -3,6 +3,7 @@ import type { Fighter } from "../sim/fighter";
 import type { MatchView } from "../sim/match";
 import { lerp, type Vec2 } from "../sim/vec";
 import type { World } from "../sim/world";
+import { drawBackUnits } from "./backView";
 import { Camera } from "./camera";
 import { Effects } from "./effects";
 import { drawFighter } from "./fighterView";
@@ -78,6 +79,8 @@ export class Renderer {
     this.drawArena(world);
     // Private info (HP, dodge, ammo) only for the fighter the camera follows: you, or who you spectate.
     for (const f of world.fighters) drawFighter(ctx, f, alpha, f === focus);
+    const aim = view.cursor ? this.camera.screenToWorld(view.cursor) : null; // the cursor is only set while you drive
+    drawBackUnits(ctx, world, alpha, aim ? focus : null, aim);
     drawProjectiles(ctx, world, alpha);
     this.effects.draw(ctx);
     if (view.lock) drawLockOn(ctx, world, view.lock, alpha);

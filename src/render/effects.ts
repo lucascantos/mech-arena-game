@@ -3,7 +3,7 @@ import type { Vec2 } from "../sim/vec";
 import { DAMAGE_COLORS, UI } from "./palette";
 
 interface Effect {
-  kind: "impact" | "explosion" | "damage";
+  kind: "impact" | "explosion" | "damage" | "beam" | "slash";
   pos: Vec2;
   color: string;
   /** Explosion radius, impact size, or damage amount. */
@@ -12,6 +12,10 @@ interface Effect {
   life: number;
   /** Damage numbers only: at least one hit in this number was a crit. */
   crit?: boolean;
+  /** Beams only: where the beam ended (`pos` is where it started, `value` its width). */
+  to?: Vec2;
+  /** Slashes only: [center angle, half arc] in radians (`value` is the radius). */
+  sweep?: [number, number];
 }
 
 /**
@@ -33,7 +37,12 @@ export class Effects {
       if (e.kind === "impact") {
         this.list.push({ kind: "impact", pos: e.pos, color: DAMAGE_COLORS[e.damageType], value: 10, born: now, life: 120 });
       } else if (e.kind === "explosion") {
-        this.list.push({ kind: "explosion", pos: e.pos, color: DAMAGE_COLORS.explosive, value: e.radius, born: now, life: 350 });
+        this.list.push({ kind: "explosion", pos: e.pos, color: DAMAGE_COLORS[e.damageType], value: e.radius, born: now, life: 350 });
+      } else if (e.kind === "beam") {
+        this.list.push({ kind: "beam", pos: e.from, to: e.to, color: DAMAGE_COLORS.energy, value: e.width, born: now, life: 250 });
+      } else if (e.kind === "slash") {
+        const sweep: [number, number] = [Math.atan2(e.dir.y, e.dir.x), (e.arc / 2) * (Math.PI / 180)];
+        this.list.push({ kind: "slash", pos: { ...e.pos }, sweep, color: DAMAGE_COLORS.energy, value: e.radius, born: now, life: 200 });
       } else if (e.kind === "damage") {
         const existing = damage.get(e.targetId);
         if (existing) {
@@ -60,6 +69,23 @@ export class Effects {
         ctx.strokeStyle = fx.color;
         ctx.lineWidth = 2;
         ctx.strokeRect(fx.pos.x - s / 2, fx.pos.y - s / 2, s, s);
+      } else if (fx.kind === "beam" && fx.to) {
+        ctx.strokeStyle = fx.color;
+        ctx.lineWidth = fx.value * (1 - t * 0.7);
+        ctx.beginPath();
+        ctx.moveTo(fx.pos.x, fx.pos.y);
+        ctx.lineTo(fx.to.x, fx.to.y);
+        ctx.stroke();
+      } else if (fx.kind === "slash" && fx.sweep) {
+        // A filled wedge: exactly the area the strike covered.
+        const [mid, half] = fx.sweep;
+        ctx.fillStyle = fx.color;
+        ctx.globalAlpha = (1 - t) * 0.45;
+        ctx.beginPath();
+        ctx.moveTo(fx.pos.x, fx.pos.y);
+        ctx.arc(fx.pos.x, fx.pos.y, fx.value, mid - half, mid + half);
+        ctx.closePath();
+        ctx.fill();
       } else if (fx.kind === "explosion") {
         // Shows the real blast radius: the ring is exactly the damage area.
         ctx.fillStyle = fx.color;

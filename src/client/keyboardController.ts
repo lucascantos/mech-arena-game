@@ -20,6 +20,8 @@ export class KeyboardController implements Controller {
   private clickQueued = false;
   private slotQueued = -1;
   private wheelSteps = 0;
+  /** Right button: the back unit. Latched like the left one. */
+  private rightDown = false;
   private rightClickQueued = false;
 
   constructor(target: HTMLElement, private readonly camera: Camera) {
@@ -35,7 +37,7 @@ export class KeyboardController implements Controller {
     window.addEventListener("keyup", (e) => this.keys.delete(e.code));
     window.addEventListener("blur", () => {
       this.keys.clear();
-      this.mouseDown = false;
+      this.mouseDown = this.rightDown = false;
     });
     target.addEventListener("mousemove", (e) => {
       this.mouseScreen = { x: e.offsetX, y: e.offsetY };
@@ -43,10 +45,11 @@ export class KeyboardController implements Controller {
     });
     target.addEventListener("mousedown", (e) => {
       if (e.button === 0) this.mouseDown = this.clickQueued = true;
-      if (e.button === 2) this.rightClickQueued = true;
+      if (e.button === 2) this.rightDown = this.rightClickQueued = true;
     });
     window.addEventListener("mouseup", (e) => {
       if (e.button === 0) this.mouseDown = false;
+      if (e.button === 2) this.rightDown = false;
     });
     target.addEventListener("wheel", (e) => {
       this.wheelSteps += Math.sign(e.deltaY);
@@ -60,16 +63,9 @@ export class KeyboardController implements Controller {
     return this.mouseKnown ? { ...this.mouseScreen } : null;
   }
 
-  /** True once per right-click (used to release the lock-on). */
-  takeRightClick(): boolean {
-    const clicked = this.rightClickQueued;
-    this.rightClickQueued = false;
-    return clicked;
-  }
-
   /** Drops queued taps, e.g. when taking control so old presses don't fire. */
   clearQueued(): void {
-    this.dodgeQueued = this.reloadQueued = this.clickQueued = false;
+    this.dodgeQueued = this.reloadQueued = this.clickQueued = this.rightClickQueued = false;
     this.slotQueued = -1;
     this.wheelSteps = 0;
   }
@@ -81,7 +77,7 @@ export class KeyboardController implements Controller {
     let selectSlot = this.slotQueued;
     if (selectSlot < 0 && this.wheelSteps !== 0 && self.weapons.length > 0) {
       const n = self.weapons.length;
-      selectSlot = (((self.weaponSlot + this.wheelSteps) % n) + n) % n;
+      selectSlot = (((self.loadout.slot + this.wheelSteps) % n) + n) % n;
     }
 
     const input: Input = {
@@ -90,9 +86,11 @@ export class KeyboardController implements Controller {
       aimX: aim.x - self.pos.x,
       aimY: aim.y - self.pos.y,
       fire: this.mouseDown || this.clickQueued, // a quick tap between ticks still fires once
+      back: this.rightDown || this.rightClickQueued,
       reload: this.reloadQueued,
       selectSlot,
       defend: this.dodgeQueued,
+      target: -1, // the lock-on fills this in
     };
     this.clearQueued();
     return input;

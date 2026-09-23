@@ -1,6 +1,6 @@
 import { lerp } from "../sim/vec";
 import type { World } from "../sim/world";
-import { DAMAGE_COLORS } from "./palette";
+import { DAMAGE_COLORS, UI } from "./palette";
 
 /** Projectiles are their bounding box, colored by damage type, with a short streak (and a lock line for missiles). */
 export function drawProjectiles(ctx: CanvasRenderingContext2D, world: World, alpha: number): void {
@@ -8,14 +8,14 @@ export function drawProjectiles(ctx: CanvasRenderingContext2D, world: World, alp
     const pos = lerp(p.prevPos, p.pos, alpha);
     const color = DAMAGE_COLORS[p.damageType];
 
-    // Homing lock: a faint dashed line from the missile to its target.
+    // Homing lock: a red dashed line from the missile to its target.
     // Missiles carry a targetId (also on a joined player's copy, which is plain data).
     const targetId = (p as { targetId?: number }).targetId;
     const target = targetId !== undefined ? world.getFighter(targetId) : undefined;
     if (target?.alive) {
       const tp = lerp(target.prevPos, target.pos, alpha);
-      ctx.strokeStyle = color;
-      ctx.globalAlpha = 0.25;
+      ctx.strokeStyle = UI.homing;
+      ctx.globalAlpha = 0.5;
       ctx.lineWidth = 1;
       ctx.setLineDash([6, 6]);
       ctx.beginPath();

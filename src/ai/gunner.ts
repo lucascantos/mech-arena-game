@@ -1,6 +1,7 @@
 import type { Fighter } from "../sim/fighter";
 import type { Rng } from "../sim/rng";
 import { add, dist, normalize, scale, sub, vec, type Vec2 } from "../sim/vec";
+import { ChargeWeapon } from "../sim/weapons/chargeWeapon";
 import { HomingWeapon } from "../sim/weapons/homingWeapon";
 import type { Weapon } from "../sim/weapons/weapon";
 import type { Personality } from "./personality";
@@ -19,15 +20,15 @@ export class Gunner {
 
   /** Best slot for this distance. Prefers loaded weapons whose sweet spot is close to `range`. */
   chooseSlot(self: Fighter, range: number): number {
-    let best = self.weaponSlot;
+    let best = self.loadout.slot;
     let bestScore = -Infinity;
     self.weapons.forEach((w, slot) => {
       // Holstered weapons don't reload, so switching to an empty one is pointless.
-      if (slot !== self.weaponSlot && w.ammo === 0) return;
+      if (slot !== self.loadout.slot && w.ammo === 0) return;
       let score = -Math.abs(range - idealRange(w, self.size.x));
       if (range > w.stats.range * 0.9) score -= 1000;
       if (w.isReloading) score -= 500;
-      if (slot === self.weaponSlot) score += 40; // a bit of loyalty, avoids flip-flopping
+      if (slot === self.loadout.slot) score += 40; // a bit of loyalty, avoids flip-flopping
       if (score > bestScore) [best, bestScore] = [slot, score];
     });
     return best;
@@ -57,6 +58,7 @@ export class Gunner {
     const w = self.weapon;
     if (!w || w.isReloading || w.ammo === 0 || range > w.stats.range * 0.9) return false;
     if (w.stats.fireMode === "auto") return true;
+    if (w instanceof ChargeWeapon) return w.chargeFraction < 1; // hold to full charge, then let go to fire
     this.triggerToggle = !this.triggerToggle;
     return this.triggerToggle;
   }

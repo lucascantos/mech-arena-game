@@ -18,6 +18,8 @@ export const UI = {
   barBack: "#00000088",
   damage: "#ff7b72",
   crit: "#ffd33d",
+  /** Line from a homing missile to its target. */
+  homing: "#ff3b3b",
 };
 
 /** Darker variant of a #rrggbb color for outlines. */

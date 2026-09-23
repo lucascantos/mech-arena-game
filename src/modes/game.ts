@@ -36,7 +36,7 @@ export interface Game {
 /** Once per tick: charge, switch or drop the lock-on from what's under your cursor. */
 export function updateLockOn(game: Game, keyboard: KeyboardController, camera: Camera): void {
   const { lockOn, match, world } = game;
-  if (keyboard.takeRightClick() || match?.roundOver) lockOn.clear();
+  if (match?.roundOver) lockOn.clear();
   const cursor = keyboard.cursor;
   const [a, b] = camera.visibleWorld();
   const visible = (p: { x: number; y: number }) => p.x >= a.x && p.x <= b.x && p.y >= a.y && p.y <= b.y;
