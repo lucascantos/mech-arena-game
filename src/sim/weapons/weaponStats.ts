@@ -42,4 +42,9 @@ export interface WeaponStats {
   knockback: number;
   /** Explosion radius; 0 means no explosion. */
   blastRadius: number;
+  /**
+   * Heavy weapons: on legs that can't fire on the move, firing roots the mech
+   * for `windup` seconds before the shot and `recovery` seconds after.
+   */
+  brace?: { windup: number; recovery: number };
 }

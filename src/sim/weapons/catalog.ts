@@ -66,7 +66,7 @@ export const ENERGY_RIFLE: WeaponStats = {
   blastRadius: 0,
 };
 
-/** Slow rockets that explode on impact or at max range. */
+/** Slow rockets that explode on impact or at max range. Heavy: bipedal legs must brace to fire. */
 export const ROCKET_LAUNCHER: WeaponStats = {
   name: "Rocket Launcher",
   shortName: "RL",
@@ -86,4 +86,5 @@ export const ROCKET_LAUNCHER: WeaponStats = {
   range: 800,
   knockback: 420,
   blastRadius: 90,
+  brace: { windup: 0.35, recovery: 0.25 },
 };

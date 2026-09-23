@@ -69,6 +69,15 @@ export const PRESETS: MechPreset[] = [
     weapons: [SHOTGUN],
     personality: AGGRESSIVE,
   },
+  {
+    // Lightest build carrying the heaviest weapon: fast and fragile, one rocket launcher.
+    id: "glass-cannon",
+    name: "Glass Cannon",
+    legs: BIPEDAL,
+    torso: LIGHT_TORSO,
+    weapons: [ROCKET_LAUNCHER],
+    personality: CAUTIOUS,
+  },
 ];
 
 export function findPreset(id: string | null | undefined): MechPreset | undefined {

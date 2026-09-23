@@ -1,5 +1,6 @@
 import type { Ability } from "./abilities/ability";
 import type { Defense } from "./abilities/defense";
+import { Brace } from "./brace";
 import { DT } from "./constants";
 import type { Input } from "./input";
 import { BIPEDAL, type Legs } from "./parts/legs";
@@ -48,6 +49,8 @@ export class Fighter {
   readonly weapons: Weapon[] = [];
   weaponSlot = 0;
   defense: Defense | null = null;
+  /** Set while planted to fire a heavy weapon. */
+  brace: Brace | null = null;
 
   constructor(config: FighterConfig) {
     this.id = config.id;
@@ -108,9 +111,15 @@ export class Fighter {
     return this.abilities.some((a) => a.grantsInvulnerability());
   }
 
-  /** False while dead or while an ability (e.g. a dash) is locking the fighter. */
+  /** False while dead, braced, or while an ability (e.g. a dash) is locking the fighter. */
   canAct(): boolean {
-    return this.alive && !this.abilities.some((a) => a.blocksActions());
+    return this.alive && !this.brace && !this.abilities.some((a) => a.blocksActions());
+  }
+
+  /** Called by a heavy weapon when fired on legs that must brace. Stops dead. */
+  startBrace(weapon: Weapon): void {
+    this.brace = new Brace(weapon);
+    this.vel = vec();
   }
 
   /** Returns the damage actually dealt (0 if invulnerable or dead). */
@@ -132,6 +141,7 @@ export class Fighter {
     this.prevPos = { ...this.spawn };
     this.vel = vec();
     this.knockback = vec();
+    this.brace = null;
     this.weaponSlot = 0;
     for (const w of this.weapons) w.reset();
     for (const a of this.abilities) a.reset();
@@ -148,12 +158,18 @@ export class Fighter {
       this.facing = rotateToward(this.facing, aim, this.stats.turnRate * DEG * DT);
     }
 
+    // Dodging out of a brace windup cancels the shot (no ammo spent).
+    if (input.defend && this.brace?.cancellable && this.defense?.isReady) this.brace = null;
     if (input.defend) this.defense?.tryActivate(input, world);
-    if (input.selectSlot >= 0) this.selectWeapon(input.selectSlot);
-    if (input.reload) this.weapon?.startReload();
-    this.weapon?.trigger(input.fire && this.canAct(), this, world);
+    if (!this.brace) {
+      if (input.selectSlot >= 0) this.selectWeapon(input.selectSlot);
+      if (input.reload) this.weapon?.startReload();
+      this.weapon?.trigger(input.fire && this.canAct(), this, world);
+    }
 
-    if (!this.abilities.some((a) => a.controlsMovement())) {
+    if (this.brace) {
+      this.vel = vec(); // rooted; only knockback can move a braced mech
+    } else if (!this.abilities.some((a) => a.controlsMovement())) {
       const desired = scale(clampUnit(vec(input.moveX, input.moveY)), this.stats.moveSpeed);
       this.vel = approach(this.vel, desired, this.stats.acceleration * DT);
     }
@@ -164,6 +180,7 @@ export class Fighter {
     this.prevPos = { ...this.pos };
     for (const ability of this.abilities) ability.update(world);
     this.weapon?.update();
+    if (this.brace && (!this.alive || !this.brace.update(this, world))) this.brace = null;
     this.pos = add(this.pos, scale(add(this.vel, this.knockback), DT));
     this.knockback = scale(this.knockback, Math.exp(-KNOCKBACK_DECAY * DT));
   }

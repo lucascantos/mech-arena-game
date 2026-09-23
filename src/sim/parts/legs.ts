@@ -25,6 +25,8 @@ export interface Legs {
   dashSpeedMultiplier: number;
   /** Multiplier on dodge cooldown. */
   dashCooldownMultiplier: number;
+  /** Can fire heavy (brace) weapons without stopping. */
+  firesOnTheMove: boolean;
 }
 
 /** All-rounder: fast and balanced, no major specialization. */
@@ -40,6 +42,7 @@ export const BIPEDAL: Legs = {
   knockbackMultiplier: 1,
   dashSpeedMultiplier: 1,
   dashCooldownMultiplier: 1,
+  firesOnTheMove: false,
 };
 
 /** Ranged / artillery: very stable, but slow to get going and slow to turn. */
@@ -55,6 +58,7 @@ export const QUADPOD: Legs = {
   knockbackMultiplier: 0.5,
   dashSpeedMultiplier: 0.85,
   dashCooldownMultiplier: 1.3,
+  firesOnTheMove: true,
 };
 
 /** Tank: very durable and stable, slow movement. */
@@ -70,4 +74,5 @@ export const TREADS: Legs = {
   knockbackMultiplier: 0.25,
   dashSpeedMultiplier: 0.7,
   dashCooldownMultiplier: 1.6,
+  firesOnTheMove: true,
 };

@@ -57,11 +57,13 @@ function impact(world: World, p: Projectile, point: Vec2, target: Fighter | null
     return;
   }
   world.emit({ kind: "impact", pos: point, damageType: p.damageType });
-  if (target) hitFighter(world, target, p.damage, normalize(p.vel), p.knockback, point);
+  const dealt = target ? hitFighter(world, p, target, p.damage, normalize(p.vel), p.knockback, point) : 0;
+  if (dealt > 0) world.emit({ kind: "projectileHit", ownerId: p.ownerId });
 }
 
 function explode(world: World, p: Projectile, center: Vec2): void {
   world.emit({ kind: "explosion", pos: center, radius: p.blastRadius });
+  let dealt = 0;
   for (const f of world.fighters) {
     if (!f.alive || f.team === p.team) continue;
     const half = { x: f.size.x / 2, y: f.size.y / 2 };
@@ -70,13 +72,17 @@ function explode(world: World, p: Projectile, center: Vec2): void {
     const falloff = 1 - (1 - BLAST_EDGE_DAMAGE) * (d / p.blastRadius);
     const away = normalize(sub(f.pos, center));
     const dir = away.x === 0 && away.y === 0 ? normalize(p.vel) : away;
-    hitFighter(world, f, p.damage * falloff, dir, p.knockback * falloff, f.pos);
+    dealt += hitFighter(world, p, f, p.damage * falloff, dir, p.knockback * falloff, f.pos);
   }
+  if (dealt > 0) world.emit({ kind: "projectileHit", ownerId: p.ownerId });
 }
 
-function hitFighter(world: World, f: Fighter, damage: number, dir: Vec2, knockback: number, at: Vec2) {
+/** Applies damage and knockback; returns the damage actually dealt. */
+function hitFighter(world: World, p: Projectile, f: Fighter, damage: number, dir: Vec2, knockback: number, at: Vec2): number {
   const dealt = f.takeDamage(damage);
-  if (dealt <= 0) return;
+  if (dealt <= 0) return 0;
   f.applyKnockback(scale(dir, knockback));
-  world.emit({ kind: "damage", targetId: f.id, amount: dealt, pos: at });
+  world.emit({ kind: "damage", targetId: f.id, sourceId: p.ownerId, amount: dealt, pos: at });
+  if (!f.alive) world.emit({ kind: "kill", victimId: f.id, killerId: p.ownerId });
+  return dealt;
 }

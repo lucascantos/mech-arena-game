@@ -1,5 +1,6 @@
 import type { Fighter } from "../sim/fighter";
 import { lerp } from "../sim/vec";
+import { drawBrace } from "./braceView";
 import { shade, UI } from "./palette";
 
 /** Draws a fighter as its bounding box plus aim line, bars and weapon label. */
@@ -24,6 +25,7 @@ export function drawFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha: nu
   ctx.strokeRect(x, y, w, h);
 
   if (f.alive) {
+    drawBrace(ctx, f, p.x, p.y);
     drawAim(ctx, f, p.x, p.y);
     drawBars(ctx, f, x, y, w, h);
   }

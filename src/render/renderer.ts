@@ -1,4 +1,6 @@
+import type { Fighter } from "../sim/fighter";
 import type { Match } from "../sim/match";
+import { lerp } from "../sim/vec";
 import type { World } from "../sim/world";
 import { Camera } from "./camera";
 import { Effects } from "./effects";
@@ -19,6 +21,7 @@ export class Renderer {
   private readonly ctx: CanvasRenderingContext2D;
   private cssWidth = 0;
   private cssHeight = 0;
+  private lastFrame = performance.now();
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     const ctx = canvas.getContext("2d");
@@ -26,9 +29,13 @@ export class Renderer {
     this.ctx = ctx;
   }
 
-  /** `alpha` in [0,1] is how far we are between the last two sim ticks. */
-  render(world: World, match: Match, alpha: number, hud: HudInfo): void {
-    this.resize(world);
+  /**
+   * `alpha` in [0,1] is how far we are between the last two sim ticks.
+   * `focus` is the fighter the camera follows (ignored in overview mode).
+   */
+  render(world: World, match: Match, alpha: number, hud: HudInfo, focus: Fighter | null): void {
+    this.resize();
+    this.updateCamera(world, focus, alpha);
     const { ctx } = this;
     const dpr = window.devicePixelRatio || 1;
 
@@ -47,7 +54,19 @@ export class Renderer {
     drawHud(ctx, world, match, hud, this.cssWidth, this.cssHeight);
   }
 
-  private resize(world: World): void {
+  private updateCamera(world: World, focus: Fighter | null, alpha: number): void {
+    const now = performance.now();
+    const dt = Math.min(0.1, (now - this.lastFrame) / 1000);
+    this.lastFrame = now;
+    if (this.camera.mode === "follow" && focus) {
+      const target = lerp(focus.prevPos, focus.pos, alpha);
+      this.camera.follow(this.cssWidth, this.cssHeight, world.width, world.height, target, dt);
+    } else {
+      this.camera.fit(this.cssWidth, this.cssHeight, world.width, world.height);
+    }
+  }
+
+  private resize(): void {
     const dpr = window.devicePixelRatio || 1;
     const w = this.canvas.clientWidth;
     const h = this.canvas.clientHeight;
@@ -57,7 +76,6 @@ export class Renderer {
       this.canvas.width = Math.round(w * dpr);
       this.canvas.height = Math.round(h * dpr);
     }
-    this.camera.fit(w, h, world.width, world.height);
   }
 
   private drawArena(world: World): void {

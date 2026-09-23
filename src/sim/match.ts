@@ -32,6 +32,7 @@ export class Match {
     if (this.resetIn === 0) {
       this.resetIn = -1;
       this.world.resetRound();
+      this.world.emit({ kind: "roundStart" });
       return;
     }
 

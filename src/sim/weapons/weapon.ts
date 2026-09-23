@@ -77,6 +77,16 @@ export class Weapon {
       return;
     }
 
+    // Heavy weapon on legs that can't fire it on the move: plant first, the shot comes after the windup.
+    if (this.stats.brace && !owner.stats.firesOnTheMove) {
+      owner.startBrace(this);
+      return;
+    }
+    this.discharge(owner, world);
+  }
+
+  /** Fires one shot now and pays for it: ammo, fire-rate cooldown, recoil. */
+  discharge(owner: Fighter, world: World): void {
     this.fire(owner, world);
     this.ammo--;
     this.shotCooldown = Math.max(1, secondsToTicks(1 / this.stats.fireRate));
@@ -92,6 +102,7 @@ export class Weapon {
     const muzzle = add(owner.pos, scale(owner.facing, owner.size.x / 2 + s.projectileSize));
     const half = (this.currentSpread / 2) * DEG;
 
+    world.emit({ kind: "shot", ownerId: owner.id, count: s.pellets });
     for (let i = 0; i < s.pellets; i++) {
       const angle = baseAngle + world.rng.range(-half, half);
       const dir = vec(Math.cos(angle), Math.sin(angle));

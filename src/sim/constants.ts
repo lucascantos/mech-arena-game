@@ -6,5 +6,5 @@ export const DT = 1 / TICK_RATE;
 export const secondsToTicks = (s: number): number => Math.round(s * TICK_RATE);
 
 /** Arena size in world units (1 unit = 1 pixel at zoom 1). */
-export const ARENA_WIDTH = 1200;
-export const ARENA_HEIGHT = 800;
+export const ARENA_WIDTH = 2400;
+export const ARENA_HEIGHT = 1600;

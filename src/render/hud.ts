@@ -1,11 +1,20 @@
 import type { Fighter } from "../sim/fighter";
 import type { Match } from "../sim/match";
+import type { Scoreboard } from "../sim/scoreboard";
 import type { World } from "../sim/world";
 import { DAMAGE_COLORS, UI } from "./palette";
+import { drawScoreboard } from "./scoreboardView";
 
 export interface HudInfo {
   /** The fighter the human controls, or null when spectating. */
   possessed: Fighter | null;
+  /** Who the camera is following. */
+  following: Fighter;
+  /** Who destroyed "you" this round, if anyone. */
+  killer: Fighter | null;
+  scoreboard: Scoreboard;
+  /** Scoreboard key is held. It also shows on its own between rounds. */
+  showScoreboard: boolean;
   fps: number;
 }
 
@@ -21,14 +30,22 @@ export function drawHud(
   ctx.font = "11px ui-monospace, Consolas, monospace";
   ctx.textAlign = "right";
   ctx.fillStyle = UI.muted;
-  ctx.fillText(`tick ${world.tick}  ${hud.fps.toFixed(0)} fps`, width - 12, height - 14);
+  ctx.fillText(`tick ${world.tick}  ${hud.fps.toFixed(0)} fps`, width - 12, height - 34);
 
   drawScore(ctx, world, match, width);
+  if (hud.showScoreboard || match.roundOver) drawScoreboard(ctx, world, match, hud.scoreboard, width, height);
   if (hud.possessed) drawLoadout(ctx, hud.possessed, height);
 
-  const status = hud.possessed
-    ? `Controlling ${hud.possessed.name}.  WASD move · Space dodge · Click fire · 1-4/wheel switch · R reload · Tab release`
-    : `Spectating bots.  Tab to take control of ${world.fighters[0]?.name ?? "a fighter"}`;
+  const you = world.fighters[0];
+  let status: string;
+  if (hud.possessed?.alive) {
+    status = `Controlling ${hud.possessed.name}.  WASD move · Space dodge · Click fire · 1-4/wheel switch · R reload · Tab release · V camera · Q stats`;
+  } else if (you && !you.alive) {
+    const by = hud.killer ? `Destroyed by ${hud.killer.name}` : "Destroyed";
+    status = `${by}.  Spectating ${hud.following.name} until the next round · Q stats`;
+  } else {
+    status = `Spectating ${hud.following.name}.  Tab to take control · V toggle camera · Q stats`;
+  }
   ctx.font = "13px ui-monospace, Consolas, monospace";
   ctx.textAlign = "center";
   ctx.fillStyle = UI.text;

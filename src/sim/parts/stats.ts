@@ -18,6 +18,8 @@ export interface FighterStats {
   dashSpeedMultiplier: number;
   /** Multiplier on defense cooldowns (dash recovery from legs × torso recovery). */
   cooldownMultiplier: number;
+  /** Heavy weapons fire without bracing (quads, treads). */
+  firesOnTheMove: boolean;
 }
 
 export interface Parts {
@@ -38,5 +40,6 @@ export function computeStats(parts: Parts): FighterStats {
     knockbackMultiplier: legs.knockbackMultiplier,
     dashSpeedMultiplier: legs.dashSpeedMultiplier,
     cooldownMultiplier: legs.dashCooldownMultiplier * torso.cooldownMultiplier,
+    firesOnTheMove: legs.firesOnTheMove,
   };
 }

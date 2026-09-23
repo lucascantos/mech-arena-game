@@ -1,12 +1,14 @@
 import { DuelBot } from "./ai/duelBot";
 import { KeyboardController } from "./client/keyboardController";
 import { startGameLoop } from "./client/gameLoop";
+import { Spectator } from "./client/spectator";
 import { spawnLineup } from "./presets/lineup";
 import { findPreset, type MechPreset } from "./presets/presets";
 import { Renderer } from "./render/renderer";
 import type { Controller } from "./sim/controller";
 import type { Input } from "./sim/input";
 import { Match } from "./sim/match";
+import { Scoreboard } from "./sim/scoreboard";
 import { World } from "./sim/world";
 
 const DEFAULT_LINEUP = ["brawler", "artillery", "juggernaut", "skirmisher"];
@@ -23,14 +25,27 @@ const lineup = presets.length >= 2 ? presets : DEFAULT_LINEUP.map((id) => findPr
 
 const fighters = spawnLineup(world, lineup);
 const match = new Match(world);
+const scoreboard = new Scoreboard(world);
 const bots = new Map<number, Controller>(
   fighters.map((f, i) => [f.id, new DuelBot(lineup[i].personality, i + 1)]),
 );
 const keyboard = new KeyboardController(canvas, renderer.camera);
+/** "You" are the first fighter: Tab takes it over, and the camera starts on it. */
+const spectator = new Spectator(fighters[0].id);
 
 /** Fighter the human is currently driving (Tab toggles), or null to spectate. */
 let possessedId: number | null = null;
+let showScoreboard = false;
+window.addEventListener("keyup", (e) => {
+  if (e.code === "KeyQ") showScoreboard = false;
+});
+window.addEventListener("blur", () => (showScoreboard = false));
 window.addEventListener("keydown", (e) => {
+  if (e.code === "KeyQ") showScoreboard = true;
+  if (e.code === "KeyV" && !e.repeat) {
+    renderer.camera.mode = renderer.camera.mode === "follow" ? "overview" : "follow";
+    return;
+  }
   if (e.code !== "Tab") return;
   e.preventDefault();
   keyboard.clearQueued();
@@ -47,9 +62,13 @@ startGameLoop(
     world.step(inputs);
     match.update();
     renderer.effects.ingest(world.events);
+    spectator.ingest(world.events, world);
+    scoreboard.ingest(world.events);
   },
   (alpha, fps) => {
     const possessed = possessedId === null ? null : (world.getFighter(possessedId) ?? null);
-    renderer.render(world, match, alpha, { possessed, fps });
+    const following = spectator.following(world) ?? fighters[0];
+    const hud = { possessed, following, killer: spectator.killerOfHome, scoreboard, showScoreboard, fps };
+    renderer.render(world, match, alpha, hud, following);
   },
 );

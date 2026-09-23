@@ -16,6 +16,7 @@ A living list of ideas. Nothing here is decided unless it's under **Decisions so
 - **Defense** stays its own class hierarchy. There will be many types.
 - **Parts → stats.** A fighter's numbers (HP, size, speed, acceleration, turn rate, recoil/knockback multipliers, dash speed/cooldown multipliers) are computed from its parts in `computeStats()`. Legs are the first part: Bipedal, Quadpod, Treads. Torso/head/arms plug into the same function.
 - **Torso** (Light / Medium / Heavy): HP (added to legs HP), weapon capacity (1 / 2 / 3), speed multiplier (weight), defense cooldown multiplier, hitbox size bonus.
+- **Bracing** (AC6-style, automatic): weapons with `brace` (Rocket Launcher) root legs without `firesOnTheMove` (Bipedal) for a windup before the shot and a recovery after. Dodge can cancel the windup (shot lost, no ammo spent), not the recovery. Quadpod and Treads fire heavy weapons on the move. The windup shows a telegraph line.
 - **Presets.** Builds are named presets (`src/presets/presets.ts`): name, legs, torso, weapons (up to capacity), plus an AI personality for when a bot drives it. New part slots get added as fields.
 - **First defense:** `Dodge` (a dash with invulnerability frames and a cooldown).
 - **First scene:** two bots dueling. Tab lets you take control of one.
