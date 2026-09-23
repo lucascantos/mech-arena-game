@@ -16,6 +16,8 @@ export interface Head {
   radarInterval: number;
   /** Chance (0–1) that a shot crits, dealing CRIT_MULTIPLIER × damage. */
   critChance: number;
+  /** Adds to the mech's weight. */
+  weight: number;
 }
 
 /** Balanced sensors. */
@@ -26,6 +28,7 @@ export const STANDARD_HEAD: Head = {
   lockOnRadius: 40,
   radarInterval: 1.0,
   critChance: 0.05,
+  weight: 6,
 };
 
 /** Sees farther and refreshes the radar twice as often, but locking on is fiddly and it rarely crits. */
@@ -36,6 +39,7 @@ export const SCOUT_HEAD: Head = {
   lockOnRadius: 25,
   radarInterval: 0.5,
   critChance: 0.03,
+  weight: 5,
 };
 
 /** Locks on easily and crits often, at the cost of a slow radar. */
@@ -46,4 +50,5 @@ export const HUNTER_HEAD: Head = {
   lockOnRadius: 80,
   radarInterval: 1.5,
   critChance: 0.1,
+  weight: 8,
 };

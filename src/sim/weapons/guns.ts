@@ -22,6 +22,7 @@ export class MachineGun extends Weapon {
       range: 650,
       knockback: 15,
       selfStagger: 0,
+      weight: 10,
     });
   }
 }
@@ -48,6 +49,7 @@ export class Shotgun extends Weapon {
       range: 650,
       knockback: 35,
       selfStagger: 0,
+      weight: 12,
     });
   }
 }
@@ -74,6 +76,7 @@ export class EnergyRifle extends Weapon {
       range: 900,
       knockback: 40,
       selfStagger: 0,
+      weight: 14,
     });
   }
 }

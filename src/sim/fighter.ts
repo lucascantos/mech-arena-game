@@ -35,8 +35,8 @@ export class Fighter {
   spawn: Vec2;
 
   readonly parts: Parts;
-  /** Final numbers from all parts. */
-  readonly stats: FighterStats;
+  /** Final numbers from all parts and equipped weapons (weight). */
+  stats: FighterStats;
 
   /** Center of the bounding box. */
   pos: Vec2;
@@ -82,6 +82,7 @@ export class Fighter {
       throw new Error(`${this.name}: ${this.parts.torso.name} torso carries at most ${this.stats.weaponCapacity} weapon(s)`);
     }
     this.weapons.push(weapon);
+    this.stats = computeStats(this.parts, this.weapons); // weapons add weight
     return this;
   }
 

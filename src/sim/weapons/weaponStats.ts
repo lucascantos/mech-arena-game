@@ -45,4 +45,6 @@ export interface WeaponStats {
    * dodge) when their legs can't fire on the move. 0 for most weapons.
    */
   selfStagger: number;
+  /** Adds to the carrier's weight, which slows movement and dashes. */
+  weight: number;
 }

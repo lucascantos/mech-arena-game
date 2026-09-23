@@ -1,6 +1,7 @@
 /**
  * Torso part. Decides how much the mech can carry and how much it can take,
- * at the cost of weight (speed), recovery (cooldowns) and a bigger hitbox.
+ * at the cost of weight (slower movement and dashes), recovery (cooldowns)
+ * and a bigger hitbox.
  */
 export interface Torso {
   name: string;
@@ -9,8 +10,8 @@ export interface Torso {
   hp: number;
   /** How many weapons can be equipped. */
   weaponCapacity: number;
-  /** Multiplier on move speed (weight). */
-  moveSpeedMultiplier: number;
+  /** Adds to the mech's weight, which slows movement and dashes (see computeStats). */
+  weight: number;
   /** Multiplier on defense cooldowns (e.g. dodge). */
   cooldownMultiplier: number;
   /** Added to both sides of the bounding box. */
@@ -23,7 +24,7 @@ export const LIGHT_TORSO: Torso = {
   shortName: "LT",
   hp: 120,
   weaponCapacity: 1,
-  moveSpeedMultiplier: 1.12,
+  weight: 20,
   cooldownMultiplier: 0.75,
   sizeBonus: -6,
 };
@@ -33,7 +34,7 @@ export const MEDIUM_TORSO: Torso = {
   shortName: "MD",
   hp: 200,
   weaponCapacity: 2,
-  moveSpeedMultiplier: 1,
+  weight: 35,
   cooldownMultiplier: 1,
   sizeBonus: 0,
 };
@@ -44,7 +45,7 @@ export const HEAVY_TORSO: Torso = {
   shortName: "HV",
   hp: 300,
   weaponCapacity: 3,
-  moveSpeedMultiplier: 0.85,
+  weight: 55,
   cooldownMultiplier: 1.3,
   sizeBonus: 8,
 };

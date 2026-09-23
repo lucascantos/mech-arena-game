@@ -24,6 +24,7 @@ export class RocketLauncher extends ExplosiveWeapon {
       range: 800,
       knockback: 420,
       selfStagger: 0.6,
+      weight: 20,
       blastRadius: 90,
       fuse: 1.6, // just past max range, so range decides
     });
@@ -56,6 +57,7 @@ export class MissileLauncher extends HomingWeapon {
         range: 520,
         knockback: 420,
         selfStagger: 0.6,
+        weight: 22,
         blastRadius: 90,
         fuse: 1.0,
       },
