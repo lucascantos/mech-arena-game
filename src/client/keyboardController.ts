@@ -16,6 +16,8 @@ export class KeyboardController implements Controller {
   // One-shot actions are queued on the event and consumed by the next tick, so taps are never lost.
   private dodgeQueued = false;
   private reloadQueued = false;
+  /** A click that may have been released before the next tick read it. */
+  private clickQueued = false;
   private slotQueued = -1;
   private wheelSteps = 0;
   private rightClickQueued = false;
@@ -40,7 +42,7 @@ export class KeyboardController implements Controller {
       this.mouseKnown = true;
     });
     target.addEventListener("mousedown", (e) => {
-      if (e.button === 0) this.mouseDown = true;
+      if (e.button === 0) this.mouseDown = this.clickQueued = true;
       if (e.button === 2) this.rightClickQueued = true;
     });
     window.addEventListener("mouseup", (e) => {
@@ -67,7 +69,7 @@ export class KeyboardController implements Controller {
 
   /** Drops queued taps, e.g. when taking control so old presses don't fire. */
   clearQueued(): void {
-    this.dodgeQueued = this.reloadQueued = false;
+    this.dodgeQueued = this.reloadQueued = this.clickQueued = false;
     this.slotQueued = -1;
     this.wheelSteps = 0;
   }
@@ -87,7 +89,7 @@ export class KeyboardController implements Controller {
       moveY: k("KeyS") - k("KeyW"),
       aimX: aim.x - self.pos.x,
       aimY: aim.y - self.pos.y,
-      fire: this.mouseDown,
+      fire: this.mouseDown || this.clickQueued, // a quick tap between ticks still fires once
       reload: this.reloadQueued,
       selectSlot,
       defend: this.dodgeQueued,

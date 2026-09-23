@@ -21,6 +21,10 @@ interface Effect {
 export class Effects {
   private list: Effect[] = [];
 
+  clear(): void {
+    this.list = [];
+  }
+
   /** Call with each tick's events. Damage to the same fighter in one tick is summed. */
   ingest(events: WorldEvent[]): void {
     const now = performance.now();

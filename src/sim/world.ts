@@ -17,6 +17,8 @@ export class World {
   readonly width = ARENA_WIDTH;
   readonly height = ARENA_HEIGHT;
   readonly fighters: Fighter[] = [];
+  /** While true (e.g. the pre-round countdown), fighters can aim but not move, shoot or dash. */
+  inputLocked = false;
   /** Fixed spawn points. When set, fighters swap between them each round (see spawnRotation). */
   spawnPoints: Vec2[] = [];
   projectiles: Projectile[] = [];
@@ -54,7 +56,10 @@ export class World {
   /** Advances the simulation by one tick. Missing inputs count as "nothing pressed". */
   step(inputs: ReadonlyMap<number, Input>): void {
     this.events = [];
-    for (const f of this.fighters) f.applyInput(inputs.get(f.id) ?? emptyInput(), this);
+    for (const f of this.fighters) {
+      const input = inputs.get(f.id) ?? emptyInput();
+      f.applyInput(this.inputLocked ? { ...emptyInput(), aimX: input.aimX, aimY: input.aimY } : input, this);
+    }
     for (const f of this.fighters) f.update(this);
     for (const p of this.projectiles) p.update(this);
     this.projectiles = this.projectiles.filter((p) => p.alive);

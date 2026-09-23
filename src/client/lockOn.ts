@@ -2,11 +2,18 @@ import { secondsToTicks } from "../sim/constants";
 import type { Fighter } from "../sim/fighter";
 import type { Input } from "../sim/input";
 import { distanceToBox } from "../sim/geometry";
-import { dist, type Vec2 } from "../sim/vec";
+import { interceptPoint } from "../sim/intercept";
+import { add, dist, lerp, type Vec2 } from "../sim/vec";
+import { HomingWeapon } from "../sim/weapons/homingWeapon";
 import type { World } from "../sim/world";
 
 /** How long the cursor must stay on an enemy to lock it. */
 const LOCK_TICKS = secondsToTicks(0.5);
+/**
+ * How much of the predicted movement the lock leads by. A full lead overshoots
+ * targets that change direction; 0.75 hit best across strafe patterns in tests.
+ */
+const LEAD = 0.75;
 /** The lock disengages when the target gets farther than this from you (world units). */
 export const LOCK_RANGE = 800;
 
@@ -19,19 +26,27 @@ export const LOCK_RANGE = 800;
  * too far away, when you right-click, or when you stop controlling a living
  * mech.
  *
- * While locked, your aim points straight at the target (see `aim`); the cursor
- * is only used to pick or switch targets.
+ * While locked, your aim leads the target (see `aim`); the cursor is only
+ * used to pick or switch targets.
  */
 export class LockOn {
   /** Locked enemy, if any. */
   targetId: number | null = null;
   /** Enemy under the cursor that is being locked, if any. */
   candidateId: number | null = null;
+  /** Q toggles this; while off there is no lock and nothing charges. */
+  enabled = true;
   private dwell = 0;
 
   /** 0 → 1 while dwelling on the candidate. */
   get progress(): number {
     return Math.min(1, this.dwell / LOCK_TICKS);
+  }
+
+  /** Turns lock-on off (dropping any lock) or back on. */
+  toggle(): void {
+    this.enabled = !this.enabled;
+    if (!this.enabled) this.clear();
   }
 
   clear(): void {
@@ -46,7 +61,7 @@ export class LockOn {
    * `visible` says whether a world point is inside your view.
    */
   update(world: World, self: Fighter | null, cursorWorld: Vec2 | null, visible: (p: Vec2) => boolean): void {
-    if (!self?.alive) return this.clear();
+    if (!self?.alive || !this.enabled) return this.clear();
 
     const target = this.targetId === null ? undefined : world.getFighter(this.targetId);
     // Drops the moment the target leaves your view, dies, or gets too far away.
@@ -70,13 +85,21 @@ export class LockOn {
   }
 
   /**
-   * Your input with its aim replaced by the direction to the locked target
-   * (no leading: where it is, not where it's going). Unchanged without a lock.
+   * Your input with its aim replaced by a lead on the locked target: most of
+   * the way (LEAD) toward where your shot would meet it given its current
+   * movement (knockback drift included) and your weapon's projectile speed.
+   * Homing weapons aim straight at it, since their missiles steer. Unchanged
+   * without a lock.
    */
   aim(world: World, self: Fighter, input: Input): Input {
     const target = this.targetId === null ? undefined : world.getFighter(this.targetId);
     if (!target?.alive) return input;
-    return { ...input, aimX: target.pos.x - self.pos.x, aimY: target.pos.y - self.pos.y };
+    const weapon = self.weapon;
+    const point =
+      !weapon || weapon instanceof HomingWeapon
+        ? target.pos
+        : lerp(target.pos, interceptPoint(self.pos, target.pos, add(target.vel, target.knockback), weapon.stats.projectileSpeed), LEAD);
+    return { ...input, aimX: point.x - self.pos.x, aimY: point.y - self.pos.y };
   }
 
   /** The visible, in-range living enemy whose (padded) box is closest to the cursor. */

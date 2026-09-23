@@ -9,7 +9,7 @@ import { drawFighter } from "./fighterView";
 import { drawHud, type HudInfo } from "./hud";
 import { UI } from "./palette";
 import { drawProjectiles } from "./projectileView";
-import { drawLockOn } from "./lockOnView";
+import { drawLockArea, drawLockOn } from "./lockOnView";
 import { drawMinimap } from "./minimap";
 import { Radar } from "./radar";
 import { drawRadarArrows } from "./radarArrows";
@@ -46,7 +46,18 @@ export class Renderer {
   }
 
   /** `alpha` in [0,1] is how far we are between the last two sim ticks. */
-  render(world: World, match: Match, alpha: number, hud: HudInfo, view: ViewInfo): void {
+  /** Clears the screen (behind the menu) and forgets the previous game. */
+  reset(): void {
+    this.camera.reset();
+    this.effects.clear();
+    const dpr = window.devicePixelRatio || 1;
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.ctx.fillStyle = UI.background;
+    this.ctx.fillRect(0, 0, this.canvas.clientWidth, this.canvas.clientHeight);
+  }
+
+  /** `match` is null in modes without rounds (Training Ground). */
+  render(world: World, match: Match | null, alpha: number, hud: HudInfo, view: ViewInfo): void {
     const { focus } = view;
     this.resize();
     this.updateCamera(world, view, alpha);
@@ -71,6 +82,11 @@ export class Renderer {
     this.effects.draw(ctx);
     if (view.lock) drawLockOn(ctx, world, view.lock, alpha);
     ctx.restore();
+
+    // Lock-on area around the cursor (only while you drive a mech with lock-on on).
+    if (view.lock?.enabled && view.cursor && focus) {
+      drawLockArea(ctx, view.cursor, focus.stats.lockOnRadius * this.camera.scale, view.lock.candidateId !== null);
+    }
 
     if (this.camera.mode === "follow" && focus) {
       this.radar.update(world, focus);

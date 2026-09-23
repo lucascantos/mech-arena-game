@@ -1,4 +1,5 @@
 import type { Fighter } from "../sim/fighter";
+import { TICK_RATE } from "../sim/constants";
 import type { Match } from "../sim/match";
 import type { Scoreboard } from "../sim/scoreboard";
 import type { World } from "../sim/world";
@@ -15,13 +16,15 @@ export interface HudInfo {
   scoreboard: Scoreboard;
   /** Scoreboard key is held. It also shows on its own between rounds. */
   showScoreboard: boolean;
+  /** Lock-on toggled on (Q). */
+  lockOnEnabled: boolean;
   fps: number;
 }
 
 export function drawHud(
   ctx: CanvasRenderingContext2D,
   world: World,
-  match: Match,
+  match: Match | null,
   hud: HudInfo,
   width: number,
   height: number,
@@ -32,16 +35,26 @@ export function drawHud(
   ctx.fillStyle = UI.muted;
   ctx.fillText(`tick ${world.tick}  ${hud.fps.toFixed(0)} fps`, width - 12, height - 34);
 
-  drawScore(ctx, world, match, width);
+  if (match) {
+    drawScore(ctx, world, match, width);
+    drawCountdown(ctx, match, width, height);
+  }
   // Full stats only outside of battle (between rounds); while fighting, Tab shows just K / D / K/D.
-  if (match.roundOver) drawScoreboard(ctx, world, match, hud.scoreboard, width, height, "full");
+  if (match?.roundOver) drawScoreboard(ctx, world, match, hud.scoreboard, width, height, "full");
   else if (hud.showScoreboard) drawScoreboard(ctx, world, match, hud.scoreboard, width, height, "compact");
-  if (hud.possessed) drawLoadout(ctx, hud.possessed, height);
+  if (hud.possessed) {
+    drawLoadout(ctx, hud.possessed, height);
+    // Lock-on state (Q toggles), always shown while you drive a mech.
+    ctx.font = "bold 12px ui-monospace, Consolas, monospace";
+    ctx.textAlign = "left";
+    ctx.fillStyle = hud.lockOnEnabled ? UI.hp : UI.muted;
+    ctx.fillText(hud.lockOnEnabled ? "LOCK-ON ON (Q)" : "LOCK-ON OFF (Q)", 12, height - 44 - hud.possessed.weapons.length * 18);
+  }
 
   const you = world.fighters[0];
   let status: string;
   if (hud.possessed?.alive) {
-    status = `Controlling ${hud.possessed.name}.  WASD move · Space dodge · Click fire · 1-4/wheel switch · R reload · Tab stats · P release · V camera`;
+    status = `Controlling ${hud.possessed.name}.  WASD move · Space dodge · Click fire · 1-4/wheel switch · R reload · Q lock-on · Tab stats · P release · V camera`;
   } else if (you && !you.alive) {
     const by = hud.killer ? `Destroyed by ${hud.killer.name}` : "Destroyed";
     status = `${by}.  Spectating ${hud.following.name} until the next round · Tab stats`;
@@ -52,6 +65,18 @@ export function drawHud(
   ctx.textAlign = "center";
   ctx.fillStyle = UI.text;
   ctx.fillText(status, width / 2, height - 14);
+}
+
+/** Big 3-2-1 before each round, then a short "FIGHT!". */
+function drawCountdown(ctx: CanvasRenderingContext2D, match: Match, width: number, height: number): void {
+  let text: string | null = null;
+  if (match.inCountdown) text = String(Math.ceil(match.countdownLeft / TICK_RATE));
+  else if (match.fightTicks < 45 && !match.roundOver) text = "FIGHT!";
+  if (!text) return;
+  ctx.font = "bold 72px system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillStyle = text === "FIGHT!" ? UI.crit : UI.text;
+  ctx.fillText(text, width / 2, height / 2 - 60);
 }
 
 function drawScore(ctx: CanvasRenderingContext2D, world: World, match: Match, width: number): void {

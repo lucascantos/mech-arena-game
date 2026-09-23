@@ -1,5 +1,5 @@
 import type { LockOn } from "../client/lockOn";
-import { lerp } from "../sim/vec";
+import { lerp, type Vec2 } from "../sim/vec";
 import type { World } from "../sim/world";
 
 const PAD = 10;
@@ -48,4 +48,19 @@ export function drawLockOn(ctx: CanvasRenderingContext2D, world: World, lock: Lo
     ctx.textAlign = "center";
     ctx.fillText("LOCK", p.x, p.y + hh + 30);
   }
+}
+
+/**
+ * The lock-on area, in screen space: a thick circle around the cursor whose
+ * radius is the head's lock-on radius. An enemy whose box touches it starts
+ * charging a lock; the circle brightens while that happens.
+ */
+export function drawLockArea(ctx: CanvasRenderingContext2D, cursor: Vec2, radiusPx: number, charging: boolean): void {
+  ctx.strokeStyle = "#ffffff";
+  ctx.globalAlpha = charging ? 0.85 : 0.35;
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.arc(cursor.x, cursor.y, radiusPx, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
 }

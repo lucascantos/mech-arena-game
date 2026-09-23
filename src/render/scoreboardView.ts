@@ -49,7 +49,7 @@ const ROW = 26;
 export function drawScoreboard(
   ctx: CanvasRenderingContext2D,
   world: World,
-  match: Match,
+  match: Match | null,
   board: Scoreboard,
   width: number,
   height: number,
@@ -57,7 +57,7 @@ export function drawScoreboard(
 ): void {
   const columns = mode === "full" ? FULL : COMPACT;
   const rows: Row[] = world.fighters
-    .map((f) => ({ f, r: board.get(f.id), wins: match.scores.get(f.team) ?? 0 }))
+    .map((f) => ({ f, r: board.get(f.id), wins: match?.scores.get(f.team) ?? 0 }))
     .sort((a, b) =>
       mode === "full"
         ? b.wins - a.wins || b.r.kills - a.r.kills || b.r.damageDealt - a.r.damageDealt

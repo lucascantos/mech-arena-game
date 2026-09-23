@@ -18,7 +18,13 @@ export class Camera {
   viewport: ScreenRect = { x: 0, y: 0, w: 0, h: 0 };
   /** World point at the center of the screen in follow mode. */
   private center: Vec2 | null = null;
-  private readonly lookAhead = new LookAhead();
+  private lookAhead = new LookAhead();
+
+  /** Forget the previous game's position and lean (snaps to the next target). */
+  reset(): void {
+    this.center = null;
+    this.lookAhead = new LookAhead();
+  }
 
   /** Fits the whole arena on screen. `width`/`height` are CSS pixels. */
   fit(width: number, height: number, worldW: number, worldH: number): void {
