@@ -48,7 +48,7 @@ export class Rocket extends Projectile {
       const falloff = 1 - (1 - BLAST_EDGE_DAMAGE) * (d / this.blastRadius);
       const away = normalize(sub(f.pos, center));
       const dir = away.x === 0 && away.y === 0 ? normalize(this.vel) : away;
-      dealt += this.hit(world, f, this.damage * falloff, dir, this.knockback * falloff, f.pos, crit);
+      dealt += this.hit(world, f, this.damage * this.falloff * falloff, dir, this.knockback * falloff, f.pos, crit);
     }
     if (dealt > 0) world.emit({ kind: "projectileHit", ownerId: this.ownerId });
   }

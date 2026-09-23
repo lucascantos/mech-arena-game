@@ -123,6 +123,8 @@ export class Weapon<S extends WeaponStats = WeaponStats> {
           damageType: s.damageType,
           knockback: s.knockback,
           range: s.range,
+          falloffStart: s.falloffStart,
+          falloffMin: s.falloffMin,
           critChance: owner.stats.critChance,
         }),
       );

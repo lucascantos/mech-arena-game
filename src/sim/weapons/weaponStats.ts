@@ -38,6 +38,10 @@ export interface WeaponStats {
   projectileSize: number;
   /** Distance before the projectile expires. */
   range: number;
+  /** Damage is full up to this distance traveled, then drops linearly until max range. */
+  falloffStart: number;
+  /** Damage multiplier at max range (1 = no falloff). */
+  falloffMin: number;
   /** Push applied to whoever gets hit, in units per second. */
   knockback: number;
   /**

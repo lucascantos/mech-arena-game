@@ -127,14 +127,13 @@ Each defense is a `Defense` subclass, and a fighter has one.
 
 ## Multiplayer plan
 
-1. **Now:** local sim, driven by inputs.
-2. **Server:** Node with a WebSocket server running the same `World.step()` at 60 ticks. Clients send `Input`; the server broadcasts snapshots.
-3. **Client prediction:** predict your own fighter, reconcile with the server, interpolate the others.
-4. **Lag compensation** for hits (rewinding hitboxes on the server).
-5. **Lobbies / matchmaking:** room codes first, a proper queue later.
-6. Anti-cheat comes for free, since the server is authoritative.
+**Status (paused):** browser-hosted online play (WebRTC via PeerJS) is in the game, but it failed between two PCs on the same Wi-Fi ("host didn't answer in time"). Free no-signup TURN relays (PeerJS, OpenRelay, freestun) all tested dead; signing up for a relay was ruled out.
 
-Open networking questions: tick rate over the network (20–30 Hz snapshots?), whether to use rollback netcode for duels, and where to host.
+**Pinned next step: dedicated server on your own PC.**
+- `npm run server`: a headless Node server that serves the game over HTTP, accepts WebSocket connections and runs the matches (authoritative, same sim). Prints the PC's LAN IP.
+- Players open `http://<server-ip>:8080` → Online → Join. LAN works directly; internet needs port forwarding (and no CGNAT). The GitHub Pages (HTTPS) copy can't connect to a plain `ws://` server, so online play uses the server-served copy.
+- Reuse the existing snapshot/protocol/host logic; remove (or keep as an option) the WebRTC hosting.
+- Later: client prediction, per-player snapshots (hide what you can't see), UPnP port opening.
 
 ---
 

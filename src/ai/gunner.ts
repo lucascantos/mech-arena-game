@@ -70,10 +70,12 @@ export class Gunner {
 
 /**
  * Distance where a weapon is at its best: half its range, but no farther than
- * where the spread cone is still about as wide as a fighter (so shotguns stay close).
+ * where its damage starts falling off, or where the spread cone is still about
+ * as wide as a fighter (so shotguns stay close).
  */
 export function idealRange(w: Weapon, targetWidth: number): number {
   const halfSpread = ((w.stats.spread / 2) * Math.PI) / 180;
   const tight = halfSpread > 0 ? targetWidth / Math.tan(halfSpread) : Infinity;
-  return Math.min(w.stats.range * 0.5, tight);
+  const falloff = w.stats.falloffMin < 1 ? w.stats.falloffStart : Infinity; // don't settle where damage has dropped
+  return Math.min(w.stats.range * 0.5, falloff, tight);
 }

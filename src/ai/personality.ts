@@ -1,8 +1,6 @@
 /** Tunables that make bots feel different from each other. */
 export interface Personality {
-  /** Distance the bot likes to circle at. */
-  preferredRange: number;
-  /** 0..1: how often it chooses to press in instead of circling or backing off. */
+  /** 0..1: how hard it presses: aggressive bots hold closer than their weapon's sweet spot and gap-close more. */
   aggression: number;
   /** 0..1: chance to react to an incoming dash or shot with its own dodge. */
   reflex: number;
@@ -17,7 +15,6 @@ export interface Personality {
 }
 
 export const AGGRESSIVE: Personality = {
-  preferredRange: 160,
   aggression: 0.7,
   reflex: 0.45,
   reactionTicks: 10,
@@ -27,7 +24,6 @@ export const AGGRESSIVE: Personality = {
 };
 
 export const BALANCED: Personality = {
-  preferredRange: 240,
   aggression: 0.5,
   reflex: 0.55,
   reactionTicks: 9,
@@ -37,7 +33,6 @@ export const BALANCED: Personality = {
 };
 
 export const CAUTIOUS: Personality = {
-  preferredRange: 320,
   aggression: 0.35,
   reflex: 0.7,
   reactionTicks: 7,

@@ -7,7 +7,7 @@ import type { World } from "../sim/world";
 import { Gunner } from "./gunner";
 import type { Personality } from "./personality";
 import { Senses } from "./senses";
-import { chooseTactic, type Tactic } from "./tactics";
+import { chooseTactic, holdRange, sightLimit, type Tactic } from "./tactics";
 import { ThreatSense } from "./threats";
 
 type Mode = "approach" | "circle" | "retreat";
@@ -48,14 +48,19 @@ export class DuelBot implements Controller {
 
     const dir = normalize(sub(target.pos, self.pos));
     const range = dist(self.pos, target.pos);
+    // Faster: kite or dive (speed decides). Otherwise hold the primary weapon's best distance.
     const tactic = chooseTactic(self, target);
-    const preferred = tactic.kind === "hold" ? this.personality.preferredRange : tactic.range;
+    const plan: Exclude<Tactic, { kind: "hold" }> =
+      tactic.kind === "hold"
+        ? { kind: "kite", range: holdRange(self, target, world, this.personality.aggression) }
+        : { ...tactic, range: Math.min(tactic.range, sightLimit(self, target, world)) };
+    const preferred = plan.range;
 
     if (--this.modeTicksLeft <= 0) {
-      if (tactic.kind === "hold") this.chooseMode(range);
+      this.maybeFlipStrafe();
       input.selectSlot = this.gunner.chooseSlot(self, range);
     }
-    if (tactic.kind !== "hold") this.followTactic(tactic, range);
+    this.followTactic(plan, range);
     // Swap right away if the current weapon runs dry mid-fight.
     if (self.weapon?.isReloading) input.selectSlot = this.gunner.chooseSlot(self, range);
 
@@ -70,7 +75,7 @@ export class DuelBot implements Controller {
     if (dodge) {
       move = dodge;
       input.defend = true;
-    } else if (tactic.kind === "dive" && this.mode === "approach" && range < preferred + 250) {
+    } else if (plan.kind === "dive" && this.mode === "approach" && range < preferred + 250) {
       // Diving a longer-ranged enemy: burn dashes to get inside its range.
       if (this.rng.chance(0.08)) input.defend = true;
     } else if (this.mode === "approach" && range < preferred + 60) {
@@ -105,21 +110,16 @@ export class DuelBot implements Controller {
     return input;
   }
 
-  /** Kite / dive: pick the mode from the distance every tick instead of rolling for it. */
+  /** Pick the mode from the distance every tick: back off, close in, or circle at the planned range. */
   private followTactic(tactic: Exclude<Tactic, { kind: "hold" }>, range: number): void {
     if (range < tactic.range * 0.85) this.mode = tactic.kind === "kite" ? "retreat" : "circle";
     else if (range > tactic.range * 1.15) this.mode = "approach";
     else this.mode = "circle";
   }
 
-  private chooseMode(range: number): void {
-    const p = this.personality;
-    const roll = this.rng.next();
-    if (range > p.preferredRange * 1.8 || roll < p.aggression * 0.5) this.mode = "approach";
-    else if (range < p.preferredRange * 0.6 && roll > p.aggression) this.mode = "retreat";
-    else this.mode = "circle";
-
-    if (this.rng.chance(p.fickleness)) this.strafeSign *= -1;
+  /** Every so often, maybe switch strafe direction (fickle bots switch more). */
+  private maybeFlipStrafe(): void {
+    if (this.rng.chance(this.personality.fickleness)) this.strafeSign *= -1;
     this.modeTicksLeft = this.rng.int(30, 90);
   }
 

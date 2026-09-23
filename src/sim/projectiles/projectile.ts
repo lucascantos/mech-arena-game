@@ -18,13 +18,18 @@ export interface ProjectileSpec {
   knockback: number;
   /** Distance it can travel before it expires. */
   range: number;
+  /** Full damage up to this distance traveled, then linearly less... */
+  falloffStart: number;
+  /** ...down to this multiplier at max range. */
+  falloffMin: number;
   /** Chance (0–1) this projectile crits when it hits; the shooter's head decides it. */
   critChance: number;
 }
 
 /**
- * A plain bullet: flies straight, damages the first enemy it touches, and
- * disappears at max range or the arena wall. Subclasses change what happens
+ * A plain bullet: flies straight, damages the first enemy it touches (less
+ * the farther it has flown, see `falloff`), and disappears at max range or
+ * the arena wall. Subclasses change what happens
  * on impact (Rocket explodes) or how it flies (Missile steers).
  */
 export class Projectile {
@@ -36,6 +41,9 @@ export class Projectile {
   readonly damageType: DamageType;
   readonly knockback: number;
   readonly critChance: number;
+  readonly range: number;
+  private readonly falloffStart: number;
+  private readonly falloffMin: number;
   pos: Vec2;
   prevPos: Vec2;
   vel: Vec2;
@@ -51,10 +59,21 @@ export class Projectile {
     this.damageType = spec.damageType;
     this.knockback = spec.knockback;
     this.critChance = spec.critChance;
+    this.range = spec.range;
+    this.falloffStart = spec.falloffStart;
+    this.falloffMin = spec.falloffMin;
     this.pos = { ...spec.pos };
     this.prevPos = { ...spec.pos };
     this.vel = spec.vel;
     this.rangeLeft = spec.range;
+  }
+
+  /** Damage multiplier from distance traveled: 1 up to falloffStart, then down to falloffMin at max range. */
+  get falloff(): number {
+    const traveled = this.range - this.rangeLeft;
+    if (traveled <= this.falloffStart || this.range <= this.falloffStart) return 1;
+    const t = Math.min(1, (traveled - this.falloffStart) / (this.range - this.falloffStart));
+    return 1 - (1 - this.falloffMin) * t;
   }
 
   /** How close a shot must pass to be dangerous (used by bots to decide whether to dodge). */
@@ -71,6 +90,7 @@ export class Projectile {
 
     const hit = this.firstFighterHit(world, next);
     if (hit) {
+      this.rangeLeft -= length(step) * hit.t; // count the partial step, for exact falloff
       this.impact(world, lerp(this.pos, next, hit.t), hit.fighter);
       return;
     }
@@ -100,7 +120,7 @@ export class Projectile {
     world.emit({ kind: "impact", pos: point, damageType: this.damageType });
     if (!target) return;
     const crit = this.rollCrit(world);
-    const dealt = this.hit(world, target, this.damage, normalize(this.vel), this.knockback, point, crit);
+    const dealt = this.hit(world, target, this.damage * this.falloff, normalize(this.vel), this.knockback, point, crit);
     if (dealt > 0) world.emit({ kind: "projectileHit", ownerId: this.ownerId });
   }
 
