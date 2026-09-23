@@ -92,6 +92,8 @@ export class Session {
     const cursor = keyboard.cursor;
     const [a, b] = camera.visibleWorld();
     const visible = (p: { x: number; y: number }) => p.x >= a.x && p.x <= b.x && p.y >= a.y && p.y <= b.y;
-    this.lockOn.update(world, this.possessed, cursor ? camera.screenToWorld(cursor) : null, visible);
+    // No locking during the pre-round countdown (no self = nothing charges, any lock drops).
+    const self = this.match?.inCountdown ? null : this.possessed;
+    this.lockOn.update(world, self, cursor ? camera.screenToWorld(cursor) : null, visible);
   }
 }

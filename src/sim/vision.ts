@@ -8,7 +8,7 @@ import type { World } from "./world";
  * Pro screen; the head can make it bigger (viewMultiplier), never smaller.
  */
 export const VIEW_ASPECT = 1512 / 982;
-export const VIEW_HEIGHT = 600;
+export const VIEW_HEIGHT = 800;
 export const VIEW_WIDTH = VIEW_HEIGHT * VIEW_ASPECT;
 
 /** A mech's view: its size, centered on the mech but kept inside the arena walls (like the camera). */

@@ -6,7 +6,7 @@ export interface Head {
   name: string;
   shortName: string;
   /**
-   * Extra view on top of the base 924 × 600 area, as a fraction (0.2 = see
+   * Extra view on top of the base 1232 × 800 area, as a fraction (0.2 = see
    * 20% farther). The base view is the minimum: heads can only add to it.
    */
   viewBonus: number;

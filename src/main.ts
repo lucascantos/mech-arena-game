@@ -40,6 +40,7 @@ window.addEventListener("keyup", (e) => {
 });
 window.addEventListener("blur", () => (showScoreboard = false));
 window.addEventListener("keydown", (e) => {
+  if (e.code === "Escape" && !session && menu.back()) return; // Esc inside a menu sub-screen goes back
   if (e.code === "Tab") {
     e.preventDefault(); // hold Tab for the scoreboard; keep the browser from moving focus
     showScoreboard = true;
@@ -69,7 +70,8 @@ startGameLoop(
     const hud = { possessed, following, killer: spectator.killerOfHome, scoreboard, showScoreboard, lockOnEnabled: lockOn.enabled, fps };
     // Cursor lean and lock-on only while you're driving a living mech; spectating just follows.
     const driving = !!possessed?.alive && following === possessed;
-    const view = { focus: following, cursor: driving ? keyboard.cursor : null, lock: driving ? lockOn : null };
+    const locking = driving && !match?.inCountdown; // no lock-on (or its circle) during the countdown
+    const view = { focus: following, cursor: driving ? keyboard.cursor : null, lock: locking ? lockOn : null };
     renderer.render(world, match, alpha, hud, view);
   },
 );
