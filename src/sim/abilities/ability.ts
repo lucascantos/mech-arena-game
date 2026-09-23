@@ -22,6 +22,8 @@ export abstract class Ability {
   protected owner!: Fighter;
   private activeLeft = 0;
   private cooldownLeft = 0;
+  /** Length of the cooldown currently running (for readiness). */
+  private cooldownTotal = 0;
   /** Ticks since the current activation started. */
   protected elapsed = 0;
 
@@ -43,8 +45,8 @@ export abstract class Ability {
   /** 1 when ready, 0 right after the active phase ends. Useful for UI. */
   get readiness(): number {
     if (this.isActive) return 0;
-    if (this.timing.cooldownTicks === 0) return 1;
-    return 1 - this.cooldownLeft / this.timing.cooldownTicks;
+    if (this.cooldownTotal === 0) return 1;
+    return 1 - this.cooldownLeft / this.cooldownTotal;
   }
 
   /** Starts the ability if it's ready and the owner is free to act. */
@@ -72,11 +74,16 @@ export abstract class Ability {
       this.activeLeft--;
       if (this.activeLeft === 0) {
         this.onEnd(world);
-        this.cooldownLeft = this.timing.cooldownTicks;
+        this.cooldownTotal = this.cooldownLeft = this.cooldownTicks();
       }
     } else if (this.cooldownLeft > 0) {
       this.cooldownLeft--;
     }
+  }
+
+  /** Cooldown to apply when the active phase ends. Override to scale by owner stats. */
+  protected cooldownTicks(): number {
+    return this.timing.cooldownTicks;
   }
 
   /** Extra conditions for activation (e.g. needs a target). Default: always. */

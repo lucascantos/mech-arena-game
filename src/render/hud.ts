@@ -27,7 +27,7 @@ export function drawHud(
 
   const status = hud.possessed
     ? `Controlling ${hud.possessed.name}.  WASD move · Space dodge · Click fire · 1-4/wheel switch · R reload · Tab release`
-    : "Spectating bot duel.  Press Tab to take control of Red";
+    : `Spectating bot duel.  Tab to take control of ${world.fighters[0]?.name ?? "a fighter"}`;
   ctx.font = "13px ui-monospace, Consolas, monospace";
   ctx.textAlign = "center";
   ctx.fillStyle = UI.text;

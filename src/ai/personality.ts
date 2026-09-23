@@ -26,6 +26,16 @@ export const AGGRESSIVE: Personality = {
   leadSkill: 0.4,
 };
 
+export const BALANCED: Personality = {
+  preferredRange: 240,
+  aggression: 0.5,
+  reflex: 0.55,
+  reactionTicks: 9,
+  fickleness: 0.4,
+  aimError: 5,
+  leadSkill: 0.6,
+};
+
 export const CAUTIOUS: Personality = {
   preferredRange: 320,
   aggression: 0.35,

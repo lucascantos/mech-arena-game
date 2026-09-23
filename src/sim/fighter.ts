@@ -2,12 +2,15 @@ import type { Ability } from "./abilities/ability";
 import type { Defense } from "./abilities/defense";
 import { DT } from "./constants";
 import type { Input } from "./input";
+import { BIPEDAL, type Legs } from "./parts/legs";
+import { computeStats, type FighterStats } from "./parts/stats";
 import type { Weapon } from "./weapons/weapon";
 import type { World } from "./world";
-import { add, clampUnit, normalize, scale, vec, type Vec2 } from "./vec";
+import { add, approach, clampUnit, normalize, rotateToward, scale, vec, type Vec2 } from "./vec";
 
 /** How quickly knockback fades (per second, exponential). */
 const KNOCKBACK_DECAY = 8;
+const DEG = Math.PI / 180;
 
 export interface FighterConfig {
   id: number;
@@ -15,10 +18,7 @@ export interface FighterConfig {
   team: number;
   color: string;
   pos: Vec2;
-  /** Bounding box size (the stand-in for the eventual art). */
-  size?: Vec2;
-  moveSpeed?: number;
-  maxHp?: number;
+  legs?: Legs;
 }
 
 export class Fighter {
@@ -26,10 +26,11 @@ export class Fighter {
   readonly name: string;
   readonly team: number;
   readonly color: string;
-  readonly size: Vec2;
-  readonly moveSpeed: number;
-  readonly maxHp: number;
   readonly spawn: Vec2;
+
+  legs: Legs;
+  /** Final numbers from all parts. Recomputed whenever a part changes. */
+  stats: FighterStats;
 
   /** Center of the bounding box. */
   pos: Vec2;
@@ -38,7 +39,7 @@ export class Fighter {
   vel: Vec2 = vec();
   /** Velocity from being hit; added on top of movement and fades out. */
   knockback: Vec2 = vec();
-  /** Unit vector the fighter is aiming at. */
+  /** Unit vector the fighter is aiming at. Turns toward the input aim at `turnRate`. */
   facing: Vec2 = vec(1, 0);
   hp: number;
 
@@ -51,13 +52,27 @@ export class Fighter {
     this.name = config.name;
     this.team = config.team;
     this.color = config.color;
-    this.size = config.size ?? vec(48, 48);
-    this.moveSpeed = config.moveSpeed ?? 260;
-    this.maxHp = config.maxHp ?? 300;
-    this.hp = this.maxHp;
+    this.legs = config.legs ?? BIPEDAL;
+    this.stats = computeStats({ legs: this.legs });
+    this.hp = this.stats.maxHp;
     this.spawn = { ...config.pos };
     this.pos = { ...config.pos };
     this.prevPos = { ...config.pos };
+  }
+
+  get size(): Vec2 {
+    return this.stats.size;
+  }
+
+  get maxHp(): number {
+    return this.stats.maxHp;
+  }
+
+  setLegs(legs: Legs): this {
+    this.legs = legs;
+    this.stats = computeStats({ legs });
+    this.hp = Math.min(this.hp, this.stats.maxHp);
+    return this;
   }
 
   equipWeapon(weapon: Weapon): this {
@@ -107,8 +122,9 @@ export class Fighter {
     return dealt;
   }
 
+  /** Stable legs shrug off part of the push. */
   applyKnockback(impulse: Vec2): void {
-    this.knockback = add(this.knockback, impulse);
+    this.knockback = add(this.knockback, scale(impulse, this.stats.knockbackMultiplier));
   }
 
   respawn(): void {
@@ -129,7 +145,9 @@ export class Fighter {
       return;
     }
     const aim = normalize(vec(input.aimX, input.aimY));
-    if (aim.x !== 0 || aim.y !== 0) this.facing = aim;
+    if (aim.x !== 0 || aim.y !== 0) {
+      this.facing = rotateToward(this.facing, aim, this.stats.turnRate * DEG * DT);
+    }
 
     if (input.defend) this.defense?.tryActivate(input, world);
     if (input.selectSlot >= 0) this.selectWeapon(input.selectSlot);
@@ -137,8 +155,8 @@ export class Fighter {
     this.weapon?.trigger(input.fire && this.canAct(), this, world);
 
     if (!this.abilities.some((a) => a.controlsMovement())) {
-      const move = clampUnit(vec(input.moveX, input.moveY));
-      this.vel = scale(move, this.moveSpeed);
+      const desired = scale(clampUnit(vec(input.moveX, input.moveY)), this.stats.moveSpeed);
+      this.vel = approach(this.vel, desired, this.stats.acceleration * DT);
     }
   }
 

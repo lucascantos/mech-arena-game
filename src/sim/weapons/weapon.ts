@@ -80,7 +80,8 @@ export class Weapon {
     this.fire(owner, world);
     this.ammo--;
     this.shotCooldown = Math.max(1, secondsToTicks(1 / this.stats.fireRate));
-    this.bloom = Math.min(this.stats.maxRecoil, this.bloom + this.stats.recoil);
+    const kick = this.stats.recoil * owner.stats.recoilMultiplier; // stable legs kick less
+    this.bloom = Math.min(this.stats.maxRecoil, this.bloom + kick);
     if (this.ammo === 0) this.startReload();
   }
 

@@ -14,6 +14,8 @@ A living list of ideas. Nothing here is decided unless it's under **Decisions so
 - **Damage types:** Bullet, Energy, Explosive. Only Explosive behaves differently for now (area damage with falloff); Bullet vs Energy will matter through armor resistances.
 - **Recoil = spread bloom** (grows per shot, recovers over time). Leg stability should reduce it later.
 - **Defense** stays its own class hierarchy. There will be many types.
+- **Parts → stats.** A fighter's numbers (HP, size, speed, acceleration, turn rate, recoil/knockback multipliers, dash speed/cooldown multipliers) are computed from its parts in `computeStats()`. Legs are the first part: Bipedal, Quadpod, Treads. Torso/head/arms plug into the same function.
+- **Presets.** Builds are named presets (`src/presets/presets.ts`): name, legs, weapon 1, weapon 2, plus an AI personality for when a bot drives it. New part slots get added as fields.
 - **First defense:** `Dodge` (a dash with invulnerability frames and a cooldown).
 - **First scene:** two bots dueling. Tab lets you take control of one.
 

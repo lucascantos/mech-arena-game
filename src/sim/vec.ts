@@ -24,6 +24,27 @@ export function normalize(a: Vec2): Vec2 {
 /** Rotates the vector 90° (a sideways direction, used for strafing). */
 export const perp = (a: Vec2): Vec2 => ({ x: -a.y, y: a.x });
 
+/** Moves `from` toward `to` by at most `maxDelta` (for acceleration). */
+export function approach(from: Vec2, to: Vec2, maxDelta: number): Vec2 {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const d = Math.hypot(dx, dy);
+  if (d <= maxDelta || d < 1e-9) return { ...to };
+  return { x: from.x + (dx / d) * maxDelta, y: from.y + (dy / d) * maxDelta };
+}
+
+/** Rotates unit vector `from` toward unit vector `to` by at most `maxRadians`. */
+export function rotateToward(from: Vec2, to: Vec2, maxRadians: number): Vec2 {
+  const a = Math.atan2(from.y, from.x);
+  const b = Math.atan2(to.y, to.x);
+  let diff = b - a;
+  while (diff > Math.PI) diff -= Math.PI * 2;
+  while (diff < -Math.PI) diff += Math.PI * 2;
+  if (Math.abs(diff) <= maxRadians) return { ...to };
+  const angle = a + Math.sign(diff) * maxRadians;
+  return { x: Math.cos(angle), y: Math.sin(angle) };
+}
+
 /** Clamps the vector's length to at most 1 (keeps diagonal input from being faster). */
 export function clampUnit(a: Vec2): Vec2 {
   const len = length(a);
