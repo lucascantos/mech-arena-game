@@ -39,11 +39,18 @@ function drawScore(ctx: CanvasRenderingContext2D, world: World, match: Match, wi
   // One colored entry per team; eliminated fighters are dimmed.
   const teams = [...match.scores.keys()];
   const leaders = teams.map((t) => world.fighters.find((f) => f.team === t)!);
-  const gap = 36;
-  ctx.font = "bold 18px system-ui, sans-serif";
-  ctx.textAlign = "left";
   const labels = leaders.map((f) => `${f.name} ${match.scores.get(f.team)}`);
-  const widths = labels.map((l) => ctx.measureText(l).width);
+  // Shrink the font until the row fits the screen.
+  let size = 18;
+  let gap = 36;
+  let widths: number[] = [];
+  ctx.textAlign = "left";
+  for (; size >= 10; size--) {
+    ctx.font = `bold ${size}px system-ui, sans-serif`;
+    gap = size * 2;
+    widths = labels.map((l) => ctx.measureText(l).width);
+    if (widths.reduce((a, b) => a + b, 0) + gap * (labels.length - 1) <= width - 24) break;
+  }
   let x = width / 2 - (widths.reduce((a, b) => a + b, 0) + gap * (labels.length - 1)) / 2;
   leaders.forEach((f, i) => {
     ctx.globalAlpha = f.alive ? 1 : 0.35;
