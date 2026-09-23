@@ -22,8 +22,12 @@ export interface FighterStats {
   recoilMultiplier: number;
   knockbackMultiplier: number;
   dashSpeedMultiplier: number;
-  /** Multiplier on defense cooldowns (dash recovery from legs × torso recovery). */
-  cooldownMultiplier: number;
+  /** Stamina pool size. */
+  maxStamina: number;
+  /** Stamina one dash costs; grows with weight, so lighter builds dash more. */
+  dashCost: number;
+  /** Stamina refilled per second (legs × torso recovery). */
+  staminaRegen: number;
   /** Heavy weapons fire without bracing (quads, treads). */
   firesOnTheMove: boolean;
   /** Size of your view relative to the base one; never below 1. */
@@ -47,6 +51,11 @@ const BASE_WEIGHT = 60;
 /** Mobility lost (or gained) per unit of weight above (or below) BASE_WEIGHT. */
 const WEIGHT_SLOPE = 0.005;
 const MIN_MOBILITY = 0.6;
+const MAX_STAMINA = 100;
+/** Dash cost at BASE_WEIGHT; scales linearly with weight. */
+const BASE_DASH_COST = 35;
+/** Stamina per second with recovery 1 (Bipedal + Medium torso). */
+const BASE_STAMINA_REGEN = 40;
 const MAX_MOBILITY = 1.2;
 
 /** Heavier mechs move and dash slower; lighter ones faster. Clamped to [0.6, 1.2]. */
@@ -70,7 +79,9 @@ export function computeStats(parts: Parts, weapons: readonly Weapon[] = []): Fig
     recoilMultiplier: legs.recoilMultiplier,
     knockbackMultiplier: legs.knockbackMultiplier,
     dashSpeedMultiplier: legs.dashSpeedMultiplier * move, // same dash time, so less distance when heavy
-    cooldownMultiplier: legs.dashCooldownMultiplier * torso.cooldownMultiplier,
+    maxStamina: MAX_STAMINA,
+    dashCost: BASE_DASH_COST * (weight / BASE_WEIGHT),
+    staminaRegen: BASE_STAMINA_REGEN * legs.staminaRecovery * torso.staminaRecovery,
     firesOnTheMove: legs.firesOnTheMove,
     viewMultiplier: 1 + Math.max(0, head.viewBonus),
     lockOnRadius: head.lockOnRadius,

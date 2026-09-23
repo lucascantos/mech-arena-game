@@ -7,6 +7,7 @@ import type { World } from "../sim/world";
 import { Gunner } from "./gunner";
 import type { Personality } from "./personality";
 import { Senses } from "./senses";
+import { chooseTactic, type Tactic } from "./tactics";
 import { ThreatSense } from "./threats";
 
 type Mode = "approach" | "circle" | "retreat";
@@ -20,7 +21,8 @@ const WALL_MARGIN = 120;
  * incoming shots. It only ever outputs an Input, exactly like a human would,
  * and it only knows what a human would: what's inside its view, plus stale
  * radar contacts (see Senses). With nobody in view it hunts the nearest
- * radar contact.
+ * radar contact. When it's faster than its target it uses that speed: it
+ * kites a shorter-ranged enemy or dives a longer-ranged one (see tactics).
  */
 export class DuelBot implements Controller {
   private readonly rng: Rng;
@@ -46,11 +48,14 @@ export class DuelBot implements Controller {
 
     const dir = normalize(sub(target.pos, self.pos));
     const range = dist(self.pos, target.pos);
+    const tactic = chooseTactic(self, target);
+    const preferred = tactic.kind === "hold" ? this.personality.preferredRange : tactic.range;
 
     if (--this.modeTicksLeft <= 0) {
-      this.chooseMode(range);
+      if (tactic.kind === "hold") this.chooseMode(range);
       input.selectSlot = this.gunner.chooseSlot(self, range);
     }
+    if (tactic.kind !== "hold") this.followTactic(tactic, range);
     // Swap right away if the current weapon runs dry mid-fight.
     if (self.weapon?.isReloading) input.selectSlot = this.gunner.chooseSlot(self, range);
 
@@ -60,12 +65,15 @@ export class DuelBot implements Controller {
     input.fire = this.gunner.trigger(self, range);
     input.reload = this.gunner.wantsReload(self, this.mode === "retreat");
 
-    let move = normalize(add(this.steer(dir, range), this.wallAvoidance(self, world)));
+    let move = normalize(add(this.steer(dir, range, preferred), this.wallAvoidance(self, world)));
     const dodge = this.threats.update(self, target, this.senses.visibleProjectiles(self, world), world);
     if (dodge) {
       move = dodge;
       input.defend = true;
-    } else if (this.mode === "approach" && range < this.personality.preferredRange + 60) {
+    } else if (tactic.kind === "dive" && this.mode === "approach" && range < preferred + 250) {
+      // Diving a longer-ranged enemy: burn dashes to get inside its range.
+      if (this.rng.chance(0.08)) input.defend = true;
+    } else if (this.mode === "approach" && range < preferred + 60) {
       // Gap-closer: dash in when committed and just outside range.
       if (this.rng.chance(0.03 * this.personality.aggression)) input.defend = true;
     }
@@ -97,6 +105,13 @@ export class DuelBot implements Controller {
     return input;
   }
 
+  /** Kite / dive: pick the mode from the distance every tick instead of rolling for it. */
+  private followTactic(tactic: Exclude<Tactic, { kind: "hold" }>, range: number): void {
+    if (range < tactic.range * 0.85) this.mode = tactic.kind === "kite" ? "retreat" : "circle";
+    else if (range > tactic.range * 1.15) this.mode = "approach";
+    else this.mode = "circle";
+  }
+
   private chooseMode(range: number): void {
     const p = this.personality;
     const roll = this.rng.next();
@@ -108,8 +123,8 @@ export class DuelBot implements Controller {
     this.modeTicksLeft = this.rng.int(30, 90);
   }
 
-  /** Desired movement direction for the current mode. */
-  private steer(dir: Vec2, range: number): Vec2 {
+  /** Desired movement direction for the current mode, orbiting at `preferred` distance. */
+  private steer(dir: Vec2, range: number, preferred: number): Vec2 {
     const side = scale(perp(dir), this.strafeSign);
     switch (this.mode) {
       case "approach":
@@ -118,7 +133,7 @@ export class DuelBot implements Controller {
         return add(scale(dir, -1), scale(side, 0.5));
       case "circle": {
         // Strafe, while nudging back toward the preferred range.
-        const error = (range - this.personality.preferredRange) / this.personality.preferredRange;
+        const error = (range - preferred) / preferred;
         return add(side, scale(dir, Math.max(-1, Math.min(1, error * 2))));
       }
     }

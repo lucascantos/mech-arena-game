@@ -1,5 +1,6 @@
 import { secondsToTicks } from "../../constants";
 import type { Input } from "../../input";
+import type { World } from "../../world";
 import { normalize, scale, vec, type Vec2 } from "../../vec";
 import { Defense } from "../defense";
 
@@ -10,20 +11,18 @@ export interface DodgeConfig {
   duration: number;
   /** Invulnerable window in seconds, starting when the dash starts. */
   iFrames: number;
-  /** Cooldown after the dash ends, in seconds. */
-  cooldown: number;
 }
 
 export const DEFAULT_DODGE: DodgeConfig = {
   speed: 900,
   duration: 0.18,
   iFrames: 0.15,
-  cooldown: 0.8,
 };
 
 /**
  * Quick dash in the movement direction (or the aim direction when standing
- * still). Briefly invulnerable, then goes on cooldown.
+ * still). Briefly invulnerable. Costs stamina (more for heavier builds)
+ * instead of having a cooldown, so you can chain dashes while stamina lasts.
  */
 export class Dodge extends Defense {
   readonly name = "Dodge";
@@ -33,23 +32,23 @@ export class Dodge extends Defense {
   constructor(private readonly config: DodgeConfig = DEFAULT_DODGE) {
     super({
       activeTicks: secondsToTicks(config.duration),
-      cooldownTicks: secondsToTicks(config.cooldown),
+      cooldownTicks: 0,
     });
     this.iFrameTicks = secondsToTicks(config.iFrames);
   }
 
+  protected canActivate(_input: Input, _world: World): boolean {
+    return this.owner.stamina.canAfford(this.owner.stats.dashCost);
+  }
+
   protected onActivate(input: Input): void {
+    this.owner.stamina.spend(this.owner.stats.dashCost);
     const move = normalize(vec(input.moveX, input.moveY));
     this.dir = move.x !== 0 || move.y !== 0 ? move : this.owner.facing;
   }
 
   protected onActiveTick(): void {
     this.owner.vel = scale(this.dir, this.config.speed * this.owner.stats.dashSpeedMultiplier);
-  }
-
-  /** Heavier parts take longer to recover from a dash. */
-  protected cooldownTicks(): number {
-    return Math.round(super.cooldownTicks() * this.owner.stats.cooldownMultiplier);
   }
 
   controlsMovement(): boolean {

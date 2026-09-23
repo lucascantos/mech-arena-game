@@ -2,6 +2,7 @@ import type { Ability } from "./abilities/ability";
 import type { Defense } from "./abilities/defense";
 import { Brace } from "./brace";
 import { DT } from "./constants";
+import { Stamina } from "./stamina";
 import type { Input } from "./input";
 import { STANDARD_HEAD, type Head } from "./parts/head";
 import { BIPEDAL, type Legs } from "./parts/legs";
@@ -52,6 +53,8 @@ export class Fighter {
   readonly weapons: Weapon[] = [];
   weaponSlot = 0;
   defense: Defense | null = null;
+  /** Spent by dashes (and future actions); refills over time. */
+  readonly stamina: Stamina;
   /** Set while recovering from a heavy weapon's self-stagger. */
   brace: Brace | null = null;
 
@@ -63,6 +66,7 @@ export class Fighter {
     this.parts = { legs: config.legs ?? BIPEDAL, torso: config.torso ?? MEDIUM_TORSO, head: config.head ?? STANDARD_HEAD };
     this.stats = computeStats(this.parts);
     this.hp = this.stats.maxHp;
+    this.stamina = new Stamina(this.stats.maxStamina);
     this.spawn = { ...config.pos };
     this.pos = { ...config.pos };
     this.prevPos = { ...config.pos };
@@ -146,6 +150,7 @@ export class Fighter {
     this.vel = vec();
     this.knockback = vec();
     this.brace = null;
+    this.stamina.refill();
     this.weaponSlot = 0;
     for (const w of this.weapons) w.reset();
     for (const a of this.abilities) a.reset();
@@ -181,6 +186,7 @@ export class Fighter {
   update(world: World): void {
     this.prevPos = { ...this.pos };
     for (const ability of this.abilities) ability.update(world);
+    if (this.alive) this.stamina.update(this.stats.staminaRegen);
     this.weapon?.update();
     if (this.brace && (!this.alive || !this.brace.update())) this.brace = null;
     this.pos = add(this.pos, scale(add(this.vel, this.knockback), DT));

@@ -5,7 +5,7 @@ import { shade, UI } from "./palette";
 
 /**
  * Draws a fighter as its bounding box plus aim line and labels. `showPrivate`
- * adds what only its own player should know (HP, dodge readiness, ammo and
+ * adds what only its own player should know (HP, stamina, ammo and
  * reloading); everyone else just sees its name, parts and weapon in hand.
  */
 export function drawFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha: number, showPrivate: boolean): void {
@@ -75,20 +75,22 @@ function drawPublicLabel(ctx: CanvasRenderingContext2D, f: Fighter, x: number, y
   }
 }
 
-/** HP, dodge readiness, and ammo or reload progress: only for the fighter you are (or are spectating). */
+/** HP, stamina, and ammo or reload progress: only for the fighter you are (or are spectating). */
 function drawPrivateBars(ctx: CanvasRenderingContext2D, f: Fighter, x: number, y: number, w: number, h: number) {
   ctx.fillStyle = UI.barBack;
   ctx.fillRect(x, y - 12, w, 6);
   ctx.fillStyle = UI.hp;
   ctx.fillRect(x, y - 12, (w * f.hp) / f.maxHp, 6);
 
-  if (f.defense) {
-    const ready = f.defense.readiness;
-    ctx.fillStyle = UI.barBack;
-    ctx.fillRect(x, y + h + 6, w, 4);
-    ctx.fillStyle = ready >= 1 ? UI.defense : UI.defense + "66";
-    ctx.fillRect(x, y + h + 6, w * ready, 4);
-  }
+  // Stamina, with a notch per dash's worth; dim when a dash isn't affordable.
+  const { stamina } = f;
+  const cost = f.stats.dashCost;
+  ctx.fillStyle = UI.barBack;
+  ctx.fillRect(x, y + h + 6, w, 4);
+  ctx.fillStyle = stamina.canAfford(cost) ? UI.defense : UI.defense + "55";
+  ctx.fillRect(x, y + h + 6, w * stamina.fraction, 4);
+  ctx.fillStyle = UI.background;
+  for (let mark = cost; mark < stamina.max; mark += cost) ctx.fillRect(x + (w * mark) / stamina.max - 0.5, y + h + 6, 1, 4);
 
   const weapon = f.weapon;
   if (!weapon) return;
