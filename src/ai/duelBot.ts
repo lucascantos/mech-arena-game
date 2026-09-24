@@ -71,7 +71,9 @@ export class DuelBot implements Controller {
     input.aimX = aim.x * range; // aim at the target's distance too (grenades land there)
     input.aimY = aim.y * range;
     input.fire = this.gunner.trigger(self, range);
-    input.back = this.backBrain.hold(self, target, range, preferred);
+    input.back = this.backBrain.hold(self, target, range);
+    const lob = input.back ? this.backBrain.lobPoint(self, target) : null;
+    if (lob) [input.aimX, input.aimY] = [lob.x - self.pos.x, lob.y - self.pos.y]; // grenade: aim where it will land
     input.target = target.id; // bots "lock on" to what they fight (a sword lunges at it)
     input.reload = this.gunner.wantsReload(self, this.mode === "retreat");
 

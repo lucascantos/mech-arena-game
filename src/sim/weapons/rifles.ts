@@ -41,7 +41,7 @@ export class BurstRifle extends BurstWeapon {
       shortName: "BR",
       mount: "hand",
       damageType: "bullet",
-      damage: 9,
+      damage: 8,
       fireMode: "semi",
       fireRate: 2.2,
       magazine: 30,

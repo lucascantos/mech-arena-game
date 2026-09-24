@@ -1,7 +1,7 @@
 import { SpinUpWeapon } from "./spinUpWeapon";
 
 /**
- * Back weapon. A huge belt of bullets: slow for the first second while the
+ * Back weapon. A huge belt of bullets: slow for the first 1.5s while the
  * barrels spin up, then a torrent. You move slower while it's turning, and
  * bipedal legs can't move at all (quad legs and treads can).
  */
@@ -14,15 +14,15 @@ export class GatlingGun extends SpinUpWeapon {
       damageType: "bullet",
       damage: 4,
       fireMode: "auto",
-      fireRate: 20,
+      fireRate: 14,
       minFireRate: 4,
-      spinUpTime: 1,
+      spinUpTime: 1.5,
       spinningSpeed: 0.8,
       rootsLightLegs: true,
       magazine: 150,
       reloadTime: 5,
       pellets: 1,
-      spread: 6,
+      spread: 9,
       recoil: 0.5,
       maxRecoil: 8,
       recoilRecovery: 25,

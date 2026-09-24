@@ -29,7 +29,7 @@ export class GrenadeLauncher extends ExplosiveWeapon {
       recoil: 3,
       maxRecoil: 6,
       recoilRecovery: 10,
-      projectileSpeed: 700,
+      projectileSpeed: 1000,
       projectileSize: 14,
       range: 900,
       falloffStart: 900,

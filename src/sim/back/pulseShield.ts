@@ -4,11 +4,11 @@ import { dot, type Vec2 } from "../vec";
 import type { BackUnit } from "./backUnit";
 
 /** Energy the shield can soak before it breaks. */
-const MAX_ENERGY = 150;
+const MAX_ENERGY = 80;
 /** Energy per second recovered while lowered... */
-const RECHARGE = 45;
+const RECHARGE = 30;
 /** ...after it has been down this long. */
-const RECHARGE_DELAY = 1;
+const RECHARGE_DELAY = 1.5;
 /** A broken shield can't be raised for this long, then comes back full. */
 const BREAK_LOCKOUT = 5;
 /** Half-width of the protected front arc, in degrees. */
@@ -18,8 +18,9 @@ const RAISED_SPEED = 0.6;
 
 /**
  * Hold right click to raise an energy shield in front of the mech: hits from
- * the front ±60° are soaked by its energy. While up you move slower and can't
- * use your main weapon. Breaking it locks it out for 5s.
+ * the front ±60° are soaked by its energy. While up you move slower (you can
+ * still shoot). Its energy is small, so it's for weathering a burst, not
+ * hiding behind. Breaking it locks it out for 5s.
  */
 export class PulseShield implements BackUnit {
   readonly name = "Pulse Shield";
@@ -48,8 +49,9 @@ export class PulseShield implements BackUnit {
     return this.raised ? RAISED_SPEED : 1;
   }
 
+  /** You can keep shooting behind it. */
   get blocksMainWeapon(): boolean {
-    return this.raised;
+    return false;
   }
 
   trigger(held: boolean): void {

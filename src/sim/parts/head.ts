@@ -20,14 +20,14 @@ export interface Head {
   weight: number;
 }
 
-/** Balanced sensors. */
+/** Balanced sensors: some extra view, decent crits. */
 export const STANDARD_HEAD: Head = {
   name: "Standard",
   shortName: "STD",
-  viewBonus: 0,
+  viewBonus: 0.1,
   lockOnRadius: 40,
-  radarInterval: 1.0,
-  critChance: 0.05,
+  radarInterval: 0.75,
+  critChance: 0.08,
   weight: 6,
 };
 
@@ -42,13 +42,13 @@ export const SCOUT_HEAD: Head = {
   weight: 5,
 };
 
-/** Locks on easily and crits often, at the cost of a slow radar. */
+/** Locks on easily and crits very often, sees a bit farther, at the cost of a slow radar. */
 export const HUNTER_HEAD: Head = {
   name: "Hunter",
   shortName: "HNT",
-  viewBonus: 0,
+  viewBonus: 0.1,
   lockOnRadius: 80,
   radarInterval: 1.5,
-  critChance: 0.1,
+  critChance: 0.16,
   weight: 8,
 };
