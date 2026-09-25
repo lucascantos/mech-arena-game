@@ -9,9 +9,10 @@ import type { World } from "../sim/world";
 
 /** Anything destroyed on the training ground comes back after this long. */
 const RESPAWN_TICKS = secondsToTicks(3);
-const PLAYER_POS = { x: 1200, y: 1050 };
-/** Two rows of targets in front of the player (looking up): near and far. */
-const ROWS = [800, 600];
+/** Positions are offsets from the arena center. You start below it... */
+const PLAYER_OFFSET = { x: 0, y: 250 };
+/** ...with two rows of targets in front of you (looking up): near and far. */
+const ROWS = [0, -200];
 const DUMMY_COLOR = "#8b949e";
 
 /** Dummies all face down, toward the player's side. */
@@ -19,9 +20,9 @@ const DOWN = { x: 0, y: 1 };
 /** A turret needs an automatic weapon so it can keep firing straight ahead. */
 const TURRET: MechPreset = { ...findPreset("brawler")!, name: "Turret", weapons: [MachineGun] };
 const LAYOUT: { behavior: DummyBehavior; x: number; name: string }[] = [
-  { behavior: "idle", x: 950, name: "Standing" },
-  { behavior: "strafe", x: 1200, name: "Strafing" },
-  { behavior: "turret", x: 1450, name: "Turret" },
+  { behavior: "idle", x: -250, name: "Standing" },
+  { behavior: "strafe", x: 0, name: "Strafing" },
+  { behavior: "turret", x: 250, name: "Turret" },
 ];
 
 /**
@@ -30,7 +31,9 @@ const LAYOUT: { behavior: DummyBehavior; x: number; name: string }[] = [
  * included, respawns after RESPAWN_TICKS.
  */
 export function setupTraining(world: World, player: MechPreset): { you: Fighter; controllers: Map<number, Controller> } {
-  const you = world.addFighter(buildFighter(player, { id: 1, team: 1, color: "#e5534b", pos: PLAYER_POS }));
+  const c = world.center;
+  const pos = { x: c.x + PLAYER_OFFSET.x, y: c.y + PLAYER_OFFSET.y };
+  const you = world.addFighter(buildFighter(player, { id: 1, team: 1, color: "#e5534b", pos }));
   you.facing = { x: 0, y: -1 };
   const controllers = new Map<number, Controller>();
   let id = 2;
@@ -38,7 +41,7 @@ export function setupTraining(world: World, player: MechPreset): { you: Fighter;
     for (const d of LAYOUT) {
       const preset = d.behavior === "turret" ? TURRET : findPreset("brawler")!;
       const name = `${d.name} ${row === 0 ? "(near)" : "(far)"}`;
-      const f = world.addFighter(buildFighter(preset, { id, team: 2, color: DUMMY_COLOR, pos: { x: d.x, y }, name }));
+      const f = world.addFighter(buildFighter(preset, { id, team: 2, color: DUMMY_COLOR, pos: { x: c.x + d.x, y: c.y + y }, name }));
       f.facing = DOWN;
       controllers.set(id++, new Dummy(d.behavior, DOWN));
     }

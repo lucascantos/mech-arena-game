@@ -1,6 +1,8 @@
+import { arenaExit } from "../arena";
 import type { Fighter } from "../fighter";
+import { firstObstacleHit } from "../obstacles";
 import { segmentHitsBox } from "../geometry";
-import { add, lerp, length, normalize, scale, sub, type Vec2 } from "../vec";
+import { add, lerp, length, normalize, scale, sub } from "../vec";
 import type { World } from "../world";
 import { Projectile } from "./projectile";
 
@@ -16,7 +18,8 @@ export class Beam extends Projectile {
     this.alive = false;
     const from = this.pos;
     const dir = normalize(this.vel);
-    let to = clipToArena(from, add(from, scale(dir, this.range)), world);
+    const end = add(from, scale(dir, this.range));
+    let to = lerp(from, end, Math.min(arenaExit(world.arena, from, end), firstObstacleHit(world.obstacles, from, end) ?? 1));
 
     const pad = this.size / 2;
     const hits: { f: Fighter; t: number }[] = [];
@@ -43,15 +46,4 @@ export class Beam extends Projectile {
     if (dealt > 0) world.emit({ kind: "projectileHit", ownerId: this.ownerId });
     world.emit({ kind: "beam", ownerId: this.ownerId, from, to, width: this.size });
   }
-}
-
-/** Shortens the segment so it ends at the arena wall. */
-function clipToArena(from: Vec2, to: Vec2, world: World): Vec2 {
-  let t = 1;
-  for (const [axis, max] of [["x", world.width], ["y", world.height]] as const) {
-    const d = to[axis] - from[axis];
-    if (to[axis] > max) t = Math.min(t, (max - from[axis]) / d);
-    if (to[axis] < 0) t = Math.min(t, -from[axis] / d);
-  }
-  return lerp(from, to, t);
 }

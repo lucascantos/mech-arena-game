@@ -9,6 +9,7 @@ import type { WorldEvent } from "../sim/events";
 import type { Fighter } from "../sim/fighter";
 import { Scoreboard } from "../sim/scoreboard";
 import { World } from "../sim/world";
+import { buildMap, type MapId } from "../maps/gameMap";
 import type { Link } from "./link";
 import { SNAPSHOT_EVERY, type HostMessage, type PlayerMessage, type Snapshot } from "./protocol";
 import { applySnapshot, MatchMirror } from "./snapshot";
@@ -20,7 +21,7 @@ import { applySnapshot, MatchMirror } from "./snapshot";
  * lock-on, kill cam, scoreboard).
  */
 export class ClientSession implements Game {
-  readonly world = new World(0);
+  readonly world: World;
   readonly match = new MatchMirror();
   readonly you: Fighter;
   readonly spectator: Spectator;
@@ -37,7 +38,9 @@ export class ClientSession implements Game {
     private readonly link: Link,
     lineup: string[],
     youId: number,
+    map: MapId,
   ) {
+    this.world = new World(0, buildMap(map)); // the same map as the host's (layouts come from a fixed seed per map)
     spawnLineup(this.world, lineup.map((id) => findPreset(id)).filter((p): p is MechPreset => !!p));
     this.you = this.world.getFighter(youId)!;
     this.spectator = new Spectator(youId);

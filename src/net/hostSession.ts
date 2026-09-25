@@ -1,6 +1,7 @@
 import { DuelBot } from "../ai/duelBot";
 import type { KeyboardController } from "../client/keyboardController";
 import type { Game } from "../modes/game";
+import { randomBattleMap } from "../maps/gameMap";
 import { Session } from "../modes/session";
 import { PRESETS, type MechPreset } from "../presets/presets";
 import type { Camera } from "../render/camera";
@@ -40,12 +41,13 @@ export class HostLobby {
     const presets = Array.from({ length: MATCH_SIZE }, randomPreset);
     const remotes = this.players.map((_, i) => new RemoteController(new DuelBot(presets[i + 1].personality, i + 2)));
     const controllers = new Map<number, Controller>(remotes.map((r, i) => [i + 1, r]));
-    const session = Session.lineup(presets, false, controllers);
+    const map = randomBattleMap();
+    const session = Session.lineup(presets, false, controllers, map);
     const lineup = presets.map((p) => p.id);
     this.players.forEach((link, i) => {
       link.onMessage((m) => (m as PlayerMessage).t === "in" && remotes[i].push((m as PlayerMessage).input));
       link.onClose(() => remotes[i].disconnect());
-      send(link, { t: "start", lineup, you: i + 2 }); // fighter ids are lineup index + 1
+      send(link, { t: "start", lineup, you: i + 2, map }); // fighter ids are lineup index + 1
     });
     return new HostSession(session, this.room, this.players);
   }

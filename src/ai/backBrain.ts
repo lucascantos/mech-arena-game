@@ -2,6 +2,7 @@ import { PulseShield } from "../sim/back/pulseShield";
 import { Weapon } from "../sim/weapons/weapon";
 import type { Fighter } from "../sim/fighter";
 import { GrenadeLauncher, GRENADE_MIN_DISTANCE } from "../sim/weapons/grenadeLauncher";
+import { HomingWeapon } from "../sim/weapons/homingWeapon";
 import { ChargeWeapon } from "../sim/weapons/chargeWeapon";
 import { MultiLockLauncher } from "../sim/weapons/multiLockLauncher";
 import type { Rng } from "../sim/rng";
@@ -26,8 +27,10 @@ export class BackBrain {
   constructor(private readonly rng: Rng) {}
 
   /** Right-button state for this tick; `target` is null when nobody is in view. */
-  hold(self: Fighter, target: Fighter | null, range: number): boolean {
-    const held = target ? this.decide(self, range) : false;
+  /** `clear`: no cover between us (grenades arc over it, missiles steer around it; beams and bullets can't). */
+  hold(self: Fighter, target: Fighter | null, range: number, clear = true): boolean {
+    const blocked = !clear && !(self.back instanceof GrenadeLauncher || self.back instanceof HomingWeapon || self.back instanceof PulseShield);
+    const held = target && !blocked ? this.decide(self, range) : false;
     this.heldTicks = held ? this.heldTicks + 1 : 0;
     return held;
   }

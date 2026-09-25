@@ -88,7 +88,7 @@ Each defense is a `Defense` subclass, and a fighter has one.
 
 - Only cooldowns (what we have now), **or**
 - **Heat:** attacks build heat, overheating locks you out. Fits mechs well.
-- **Energy/stamina:** a shared pool for attacks and defense (Souls-like).
+- **Energy:** a shared pool for attacks and defense (Souls-like). Dashes use it now.
 
 ---
 

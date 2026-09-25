@@ -11,10 +11,16 @@ import type { Input } from "../sim/input";
 import { Match } from "../sim/match";
 import { Scoreboard } from "../sim/scoreboard";
 import { World } from "../sim/world";
+import { Zone } from "../sim/zone";
+import { buildMap, randomBattleMap, STANDARD_RADIUS, type MapId } from "../maps/gameMap";
 import { updateLockOn, type Game } from "./game";
 import { Respawner, setupTraining } from "./training";
 
-export type ModeId = "ffa" | "duel" | "training";
+export type ModeId = "ffa" | "duel" | "training" | "royale";
+
+/** Battle royale map: twice the standard size per side; the walls close in to half the standard size. */
+const ROYALE_MAP_SCALE = 2;
+const ROYALE_MIN_SCALE = 0.5;
 
 const randomPreset = (): MechPreset => PRESETS[Math.floor(Math.random() * PRESETS.length)];
 const randomSeed = (): number => Math.floor(Math.random() * 2 ** 31);
@@ -31,6 +37,8 @@ export class Session implements Game {
   /** Fighter you are driving (P toggles), or null while spectating. */
   possessedId: number | null;
   readonly banner: string | null = null;
+  /** Battle royale only: closes the walls in as mechs fall. */
+  private zone: Zone | null = null;
 
   private constructor(
     readonly world: World,
@@ -45,23 +53,33 @@ export class Session implements Game {
     this.possessedId = spectate ? null : you.id;
   }
 
-  /** 8P FFA: 8 random mechs. Duel: 2. Training: you and the dummies. */
-  static start(mode: ModeId): Session {
+  /** 8P FFA on `map`: you (`player`, your hangar build) and 7 random mechs. Duel: you and 1. Training: you and the dummies. */
+  static start(mode: ModeId, player: MechPreset, map: MapId = randomBattleMap()): Session {
     if (mode === "training") {
       const world = new World(randomSeed());
-      const { you, controllers } = setupTraining(world, randomPreset());
+      const { you, controllers } = setupTraining(world, player);
       return new Session(world, null, you, controllers, new Respawner(you.id), false);
     }
-    const count = mode === "ffa" ? 8 : 2;
-    return Session.lineup(Array.from({ length: count }, randomPreset), false);
+    const count = mode === "duel" ? 2 : 8;
+    const lineup = [player, ...Array.from({ length: count - 1 }, randomPreset)];
+    if (mode !== "royale") return Session.lineup(lineup, false, new Map(), map);
+    const session = Session.lineup(lineup, false, new Map(), map, ROYALE_MAP_SCALE);
+    session.zone = new Zone(count, ROYALE_MIN_SCALE / ROYALE_MAP_SCALE);
+    return session;
   }
 
   /**
    * A match with these presets: you are the first, the rest are bots unless
    * `controllers` (by lineup index) says otherwise, e.g. online players.
    */
-  static lineup(presets: MechPreset[], spectate: boolean, controllers = new Map<number, Controller>()): Session {
-    const world = new World(randomSeed());
+  static lineup(
+    presets: MechPreset[],
+    spectate: boolean,
+    controllers = new Map<number, Controller>(),
+    map: MapId = randomBattleMap(),
+    mapScale = 1,
+  ): Session {
+    const world = new World(randomSeed(), buildMap(map, STANDARD_RADIUS * mapScale));
     const fighters = spawnLineup(world, presets);
     const bots = new Map<number, Controller>(
       fighters.map((f, i) => [f.id, controllers.get(i) ?? new DuelBot(presets[i].personality, i + 1)]),
@@ -89,6 +107,7 @@ export class Session implements Game {
       }
     }
     world.step(inputs);
+    this.zone?.update(world);
     this.match?.update();
     this.respawner?.update(world);
     this.spectator.ingest(world.events, world);

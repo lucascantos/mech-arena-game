@@ -4,7 +4,7 @@ import type { Defense } from "./abilities/defense";
 import type { Brace } from "./brace";
 import { DT } from "./constants";
 import { Loadout } from "./loadout";
-import { Stamina } from "./stamina";
+import { Energy } from "./energy";
 import type { Input } from "./input";
 import type { FighterConfig } from "./fighterConfig";
 import { STANDARD_HEAD } from "./parts/head";
@@ -52,7 +52,7 @@ export class Fighter {
   readonly weapons: Weapon[] = this.loadout.weapons;
   defense: Defense | null = null;
   /** Spent by dashes (and future actions); refills over time. */
-  readonly stamina: Stamina;
+  readonly energy: Energy;
   /** Set while recovering from a heavy weapon's self-stagger. */
   brace: Brace | null = null;
 
@@ -64,7 +64,7 @@ export class Fighter {
     this.parts = { legs: config.legs ?? BIPEDAL, torso: config.torso ?? MEDIUM_TORSO, head: config.head ?? STANDARD_HEAD };
     this.stats = computeStats(this.parts);
     this.hp = this.stats.maxHp;
-    this.stamina = new Stamina(this.stats.maxStamina);
+    this.energy = new Energy(this.stats.maxEnergy);
     this.spawn = { ...config.pos };
     this.pos = { ...config.pos };
     this.prevPos = { ...config.pos };
@@ -154,7 +154,7 @@ export class Fighter {
     this.vel = vec();
     this.knockback = vec();
     this.brace = null;
-    this.stamina.refill();
+    this.energy.refill();
     this.loadout.reset();
     for (const a of this.abilities) a.reset();
   }
@@ -180,7 +180,7 @@ export class Fighter {
     } else if (!this.abilities.some((a) => a.controlsMovement())) {
       const speed = this.stats.moveSpeed * this.loadout.moveMultiplier;
       const desired = scale(clampUnit(vec(input.moveX, input.moveY)), speed);
-      this.vel = approach(this.vel, desired, this.stats.acceleration * DT);
+      this.vel = approach(this.vel, desired, this.stats.acceleration * world.map.grip * DT); // ice: less grip, slides
     }
   }
 
@@ -188,10 +188,10 @@ export class Fighter {
   update(world: World): void {
     this.prevPos = { ...this.pos };
     for (const ability of this.abilities) ability.update(world);
-    if (this.alive) this.stamina.update(this.stats.staminaRegen);
+    if (this.alive) this.energy.update(this.stats.energyRegen);
     this.loadout.update(this);
     if (this.brace && (!this.alive || !this.brace.update())) this.brace = null;
     this.pos = add(this.pos, scale(add(this.vel, this.knockback), DT));
-    this.knockback = scale(this.knockback, Math.exp(-KNOCKBACK_DECAY * DT));
+    this.knockback = scale(this.knockback, Math.exp(-KNOCKBACK_DECAY * world.map.grip * DT));
   }
 }

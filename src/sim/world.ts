@@ -1,5 +1,7 @@
-import { ARENA_HEIGHT, ARENA_WIDTH } from "./constants";
+import { buildMap, type GameMap } from "../maps/gameMap";
+import { clampToArena, type ArenaCircle } from "./arena";
 import type { Fighter } from "./fighter";
+import { pushOut, shapeNear, type Obstacle } from "./obstacles";
 import { emptyInput, type Input } from "./input";
 import type { WorldEvent } from "./events";
 import type { Projectile } from "./projectiles/projectile";
@@ -14,8 +16,13 @@ import type { Vec2 } from "./vec";
  */
 export class World {
   tick = 0;
-  readonly width = ARENA_WIDTH;
-  readonly height = ARENA_HEIGHT;
+  /** The circular wall: the map's full circle, unless a battle royale Zone is closing it in. */
+  arena: ArenaCircle;
+  /** Solid things on the map (stop mechs and shots). */
+  obstacles: Obstacle[];
+  /** The square around the arena circle. */
+  readonly width: number;
+  readonly height: number;
   readonly fighters: Fighter[] = [];
   /** While true (e.g. the pre-round countdown), fighters can aim but not move, shoot or dash. */
   inputLocked = false;
@@ -27,8 +34,27 @@ export class World {
   readonly rng: Rng;
   private nextId = 1;
 
-  constructor(seed: number) {
+  constructor(
+    seed: number,
+    readonly map: GameMap = buildMap("training"),
+  ) {
     this.rng = new Rng(seed);
+    this.width = this.height = map.radius * 2;
+    this.arena = this.fullArena();
+    this.obstacles = [...map.obstacles];
+  }
+
+  fullArena(): ArenaCircle {
+    return { x: this.map.radius, y: this.map.radius, r: this.map.radius };
+  }
+
+  get center(): Vec2 {
+    return { x: this.arena.x, y: this.arena.y };
+  }
+
+  /** Removes obstacles on or near the spawn points, so nobody starts inside a wall. */
+  clearSpawns(clearance: number): void {
+    this.obstacles = this.obstacles.filter((o) => !this.spawnPoints.some((p) => shapeNear(o.shape, p, clearance)));
   }
 
   addFighter(fighter: Fighter): Fighter {
@@ -64,7 +90,13 @@ export class World {
     for (const p of this.projectiles) p.update(this);
     this.projectiles = this.projectiles.filter((p) => p.alive);
     this.separateFighters();
-    for (const f of this.fighters) this.keepInArena(f);
+    for (const f of this.fighters) {
+      // A few passes, so a mech squeezed between two pieces of cover (or cover and the wall) settles in the gap.
+      for (let pass = 0; pass < 4; pass++) {
+        for (const o of this.obstacles) pushOut(f, o.shape);
+        this.keepInArena(f);
+      }
+    }
     this.tick++;
   }
 
@@ -78,6 +110,7 @@ export class World {
   /** Clears projectiles and puts every fighter back at its spawn point for `round`. */
   resetRound(round: number): void {
     this.projectiles = [];
+    this.arena = this.fullArena();
     this.assignSpawns(round);
     for (const f of this.fighters) f.respawn();
   }
@@ -107,10 +140,8 @@ export class World {
     }
   }
 
+  /** Inside the circular wall (a closing wall pushes fighters along). */
   private keepInArena(f: Fighter): void {
-    const hw = f.size.x / 2;
-    const hh = f.size.y / 2;
-    f.pos.x = Math.min(this.width - hw, Math.max(hw, f.pos.x));
-    f.pos.y = Math.min(this.height - hh, Math.max(hh, f.pos.y));
+    f.pos = clampToArena(this.arena, f.pos, Math.max(f.size.x, f.size.y) / 2);
   }
 }

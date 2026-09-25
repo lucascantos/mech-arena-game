@@ -23,8 +23,8 @@ export interface Legs {
   knockbackMultiplier: number;
   /** Multiplier on dodge dash speed. */
   dashSpeedMultiplier: number;
-  /** Multiplier on how fast stamina refills (lighter, nimbler legs recover faster). */
-  staminaRecovery: number;
+  /** Multiplier on how fast energy refills (lighter, nimbler legs recover faster). */
+  energyRecovery: number;
   /** Can fire heavy (brace) weapons without stopping. */
   firesOnTheMove: boolean;
 }
@@ -41,7 +41,7 @@ export const BIPEDAL: Legs = {
   recoilMultiplier: 1,
   knockbackMultiplier: 1,
   dashSpeedMultiplier: 1,
-  staminaRecovery: 1,
+  energyRecovery: 1,
   firesOnTheMove: false,
 };
 
@@ -57,7 +57,7 @@ export const QUADPOD: Legs = {
   recoilMultiplier: 0.35,
   knockbackMultiplier: 0.5,
   dashSpeedMultiplier: 0.85,
-  staminaRecovery: 0.77,
+  energyRecovery: 0.77,
   firesOnTheMove: true,
 };
 
@@ -73,6 +73,6 @@ export const TREADS: Legs = {
   recoilMultiplier: 0.5,
   knockbackMultiplier: 0.25,
   dashSpeedMultiplier: 0.7,
-  staminaRecovery: 0.63,
+  energyRecovery: 0.63,
   firesOnTheMove: true,
 };

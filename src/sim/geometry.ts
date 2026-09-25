@@ -1,5 +1,13 @@
 import type { Vec2 } from "./vec";
 
+/** An axis-aligned rectangle by its corners (x0,y0 top-left). */
+export interface Rect {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+}
+
 /**
  * Where a moving point (from `a` to `b`) first enters a box, as a fraction of
  * the path in [0, 1], or null if it never touches it. Swept so fast bullets

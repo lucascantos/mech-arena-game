@@ -42,6 +42,20 @@ export function drawMinimap(
   ctx.rect(x0, y0, WIDTH, h);
   ctx.clip();
 
+  // Cover, faintly, and the circular wall (red while a battle royale zone closes in).
+  ctx.fillStyle = UI.minimapObstacle;
+  for (const { shape: o } of world.obstacles) {
+    const c = toMap(o);
+    if (o.kind === "box") ctx.fillRect(c.x - (o.w * scale) / 2, c.y - (o.h * scale) / 2, o.w * scale, o.h * scale);
+    else ctx.fillRect(c.x - o.r * scale, c.y - o.r * scale, 2 * o.r * scale, 2 * o.r * scale);
+  }
+  const wall = world.arena;
+  const center = toMap(wall);
+  ctx.strokeStyle = wall.r < world.map.radius - 0.5 ? UI.zoneWall : UI.wall;
+  ctx.beginPath();
+  ctx.arc(center.x, center.y, wall.r * scale, 0, Math.PI * 2);
+  ctx.stroke();
+
   // What the camera currently shows.
   const [topLeft, bottomRight] = camera.visibleWorld();
   const a = toMap(topLeft);

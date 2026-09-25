@@ -1,3 +1,4 @@
+import { BATTLE_MAPS, type MapId } from "../maps/gameMap";
 import type { ModeId } from "../modes/session";
 
 interface Item {
@@ -8,7 +9,8 @@ interface Item {
 
 /** What the menu asks the game to do. */
 export interface MenuActions {
-  play(mode: ModeId): void;
+  /** `map`: where to fight (random when left out). */
+  play(mode: ModeId, map?: MapId): void;
   /** Open a room others can join. */
   host(): void;
   /** Start the hosted match with whoever joined. */
@@ -16,13 +18,17 @@ export interface MenuActions {
   join(code: string): void;
   /** Leave the host/join screens (closes any room or connection). */
   leaveOnline(): void;
+  /** Shows the hangar (build editor) inside `parent`; `done` returns to the main menu. */
+  mountHangar(parent: HTMLElement, done: () => void): void;
+  /** Name of your current build, for the main menu. */
+  buildName(): string;
 }
 
-type Screen = "main" | "online" | "host" | "join";
+type Screen = "main" | "maps" | "online" | "host" | "join" | "hangar";
 
 /**
- * The start menu: an HTML overlay. Main screen: Play, Online, Training
- * Ground. Online: Host Server (shows a room code and who joined) or Join
+ * The start menu: an HTML overlay. Main screen: Play, Hangar, Online,
+ * Training Ground. Hangar: edit the mech you play with. Online: Host Server (shows a room code and who joined) or Join
  * Server (type a code).
  */
 export class Menu {
@@ -52,6 +58,7 @@ export class Menu {
   /** Esc: one screen back. Returns false on the main screen (nothing to go back to). */
   back(): boolean {
     if (this.screen === "main") return false;
+    if (this.screen === "hangar" || this.screen === "maps") return this.show("main"), true;
     if (this.screen === "host" || this.screen === "join") this.actions.leaveOnline();
     this.show(this.screen === "online" ? "main" : "online");
     return true;
@@ -71,15 +78,25 @@ export class Menu {
 
   private render(): void {
     this.root.replaceChildren();
-    this.el("h1", "MECH ARENA");
+    this.root.classList.toggle("wide", this.screen === "hangar");
     const a = this.actions;
+    if (this.screen === "hangar") return a.mountHangar(this.root, () => this.show("main"));
+    this.el("h1", "MECH ARENA");
     if (this.screen === "main") {
       this.buttons([
-        { title: "Play", detail: "8-player free-for-all against random mechs", action: () => a.play("ffa") },
+        { title: "Play", detail: "8-player free-for-all against random mechs", action: () => this.show("maps") },
+        { title: "Hangar", detail: `Build your mech · ${a.buildName()}`, action: () => this.show("hangar") },
         { title: "Online", detail: "Host or join a match with other players", action: () => this.show("online") },
         { title: "Training Ground", detail: "Practice on dummies that stand, strafe or shoot", action: () => a.play("training") },
       ]);
       this.el("p", "Esc returns to this menu", "menu-hint");
+    } else if (this.screen === "maps") {
+      this.el("p", "Choose a map", "menu-hint");
+      this.buttons([
+        ...BATTLE_MAPS.map((m) => ({ title: m.name, detail: m.detail, action: () => a.play("ffa", m.id) })),
+        { title: "Random", detail: "Any of the maps above", action: () => a.play("ffa") },
+        { title: "Back", detail: "Return to the main menu", action: () => this.back() },
+      ]);
     } else if (this.screen === "online") {
       this.buttons([
         { title: "Host Server", detail: "Your machine runs the match; friends join with a code", action: () => (this.show("host"), a.host()) },

@@ -15,7 +15,7 @@ const r3 = (n: number) => Math.round(n * 1000) / 1000;
 export function takeSnapshot(world: World, match: Match | null, events: WorldEvent[]): Snapshot {
   const fighters: FighterState[] = world.fighters.map((f) => [
     f.id, r1(f.pos.x), r1(f.pos.y), r1(f.vel.x + f.knockback.x), r1(f.vel.y + f.knockback.y), r3(f.facing.x), r3(f.facing.y),
-    r1(f.hp), f.loadout.slot, r1(f.stamina.current), f.defense ? f.defense.netState() : [0, 0], f.brace ? f.brace.ticksRemaining : -1,
+    r1(f.hp), f.loadout.slot, r1(f.energy.current), f.defense ? f.defense.netState() : [0, 0], f.brace ? f.brace.ticksRemaining : -1,
     f.weapons.map((w) => w.netState()), f.back ? f.back.netState() : [],
   ]);
   const projectiles: ProjectileState[] = world.projectiles.map((p) => [
@@ -48,7 +48,7 @@ export class MatchMirror implements MatchView {
  */
 export function applySnapshot(world: World, mirror: MatchMirror, snap: Snapshot): void {
   world.tick = snap.tick;
-  for (const [id, x, y, vx, vy, fx, fy, hp, slot, stamina, dash, brace, weapons, back] of snap.fighters) {
+  for (const [id, x, y, vx, vy, fx, fy, hp, slot, energy, dash, brace, weapons, back] of snap.fighters) {
     const f = world.getFighter(id);
     if (!f) continue;
     f.prevPos = f.pos;
@@ -58,7 +58,7 @@ export function applySnapshot(world: World, mirror: MatchMirror, snap: Snapshot)
     f.facing = { x: fx, y: fy };
     f.hp = hp;
     f.loadout.slot = slot;
-    f.stamina.current = stamina;
+    f.energy.current = energy;
     f.defense?.syncFromNet(dash);
     weapons.forEach((w, i) => f.weapons[i]?.syncFromNet(w));
     f.back?.syncFromNet(back);

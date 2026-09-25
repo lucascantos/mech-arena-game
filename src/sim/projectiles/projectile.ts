@@ -1,7 +1,9 @@
 import { DT } from "../constants";
+import { clampToArena, insideArena } from "../arena";
 import { dealDamage } from "../damage";
 import type { Fighter } from "../fighter";
 import { segmentHitsBox } from "../geometry";
+import { firstObstacleHit } from "../obstacles";
 import { add, length, lerp, normalize, scale, type Vec2 } from "../vec";
 import type { DamageType } from "../weapons/weaponStats";
 import type { World } from "../world";
@@ -94,7 +96,14 @@ export class Projectile {
     const step = scale(this.vel, DT);
     const next = add(this.pos, step);
 
+    // A wall or obstacle in the way ends the shot there (grenades fly over everything).
+    const blocked = this.hitsFighters ? firstObstacleHit(world.obstacles, this.pos, next, this.size / 2) : null;
     const hit = this.firstFighterHit(world, next);
+    if (blocked !== null && (!hit || blocked < hit.t)) {
+      this.rangeLeft -= length(step) * blocked;
+      this.impact(world, lerp(this.pos, next, blocked), null);
+      return;
+    }
     if (hit) {
       this.rangeLeft -= length(step) * hit.t; // count the partial step, for exact falloff
       this.impact(world, lerp(this.pos, next, hit.t), hit.fighter);
@@ -103,9 +112,9 @@ export class Projectile {
 
     this.pos = next;
     const expired = this.advanceLifetime(length(step));
-    const outside = next.x < 0 || next.y < 0 || next.x > world.width || next.y > world.height;
+    const outside = !insideArena(world.arena, next);
     if (outside || expired) {
-      const point = { x: Math.min(world.width, Math.max(0, next.x)), y: Math.min(world.height, Math.max(0, next.y)) };
+      const point = clampToArena(world.arena, next);
       this.impact(world, point, null);
     }
   }

@@ -26,6 +26,7 @@ export class KeyboardController implements Controller {
 
   constructor(target: HTMLElement, private readonly camera: Camera) {
     window.addEventListener("keydown", (e) => {
+      if (e.target instanceof HTMLInputElement) return; // typing in a menu field (build name, room code)
       this.keys.add(e.code);
       if (e.code === "Space") e.preventDefault();
       if (e.repeat) return;

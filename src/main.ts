@@ -1,5 +1,7 @@
 import { KeyboardController } from "./client/keyboardController";
 import { startGameLoop } from "./client/gameLoop";
+import { loadBuild, saveBuild } from "./client/buildStore";
+import { HangarView } from "./client/hangar/hangarView";
 import { Menu } from "./client/menu";
 import type { Game } from "./modes/game";
 import { Session } from "./modes/session";
@@ -8,6 +10,7 @@ import { HostLobby } from "./net/hostSession";
 import type { Link } from "./net/link";
 import { hostRoom, joinRoom, type JoinFailure } from "./net/peerLink";
 import type { HostMessage } from "./net/protocol";
+import { toPreset, type Build } from "./presets/build";
 import { findPreset, type MechPreset } from "./presets/presets";
 import { Renderer } from "./render/renderer";
 
@@ -52,8 +55,15 @@ function leaveOnline(): void {
   menu.setStatus("");
 }
 
+let build = loadBuild();
+
 const menu = new Menu({
-  play: (mode) => start(Session.start(mode)),
+  play: (mode, map) => start(Session.start(mode, toPreset(build), map)),
+  mountHangar: (parent, done) => {
+    const save = (b: Build) => ((build = b), saveBuild(b));
+    new HangarView(build, save, done).mount(parent);
+  },
+  buildName: () => build.name,
   host: () => {
     menu.setStatus("Creating a room…");
     hostRoom()
@@ -82,7 +92,7 @@ const menu = new Menu({
           if (m.t === "lobby") menu.setStatus(`Connected (${m.players} players). Waiting for the host to start…`);
           else if (m.t === "start" && pendingLink === link) {
             pendingLink = null;
-            start(new ClientSession(link, m.lineup, m.you));
+            start(new ClientSession(link, m.lineup, m.you, m.map));
           }
         });
         link.onClose(() => pendingLink === link && menu.setStatus("The host closed the room."));

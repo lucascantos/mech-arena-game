@@ -20,6 +20,10 @@ export const UI = {
   crit: "#ffd33d",
   /** Line from a homing missile to its target. */
   homing: "#ff3b3b",
+  /** Area outside a closing battle royale arena, and its walls. */
+  outside: "#05070acc",
+  zoneWall: "#f85149",
+  minimapObstacle: "#3a434f",
 };
 
 /** Darker variant of a #rrggbb color for outlines. */

@@ -1,14 +1,14 @@
 import { DT, secondsToTicks } from "./constants";
 
-/** Regeneration pauses this long after spending stamina. */
+/** Regeneration pauses this long after spending energy. */
 const REGEN_DELAY_TICKS = secondsToTicks(0.4);
 
 /**
- * A mech's stamina pool. Actions (dashes for now) spend it; it refills over
+ * A mech's energy pool. Actions (dashes for now) spend it; it refills over
  * time at a rate set by the mech's parts, after a short pause following each
  * spend, so spamming actions drains it.
  */
-export class Stamina {
+export class Energy {
   current: number;
   private pauseLeft = 0;
 

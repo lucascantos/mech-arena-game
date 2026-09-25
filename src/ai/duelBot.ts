@@ -1,11 +1,13 @@
 import type { Controller } from "../sim/controller";
 import type { Fighter } from "../sim/fighter";
 import { emptyInput, type Input } from "../sim/input";
+import { insideArena } from "../sim/arena";
 import { Rng } from "../sim/rng";
 import { add, dist, normalize, perp, scale, sub, vec, type Vec2 } from "../sim/vec";
 import type { World } from "../sim/world";
 import { BackBrain } from "./backBrain";
 import { Gunner } from "./gunner";
+import { avoidObstacles, clearShot, PathFollower } from "./navigation";
 import type { Personality } from "./personality";
 import { Senses } from "./senses";
 import { chooseTactic, holdRange, sightLimit, type Tactic } from "./tactics";
@@ -31,6 +33,8 @@ export class DuelBot implements Controller {
   private readonly backBrain: BackBrain;
   private readonly threats: ThreatSense;
   private readonly senses = new Senses();
+  /** Route around cover, when there's no straight way to where it wants to go. */
+  private readonly route = new PathFollower();
   private mode: Mode = "circle";
   private modeTicksLeft = 0;
   private strafeSign = 1;
@@ -64,20 +68,26 @@ export class DuelBot implements Controller {
       input.selectSlot = this.gunner.chooseSlot(self, range);
     }
     this.followTactic(plan, range);
+    // Cover in the way: close in (steering around it) until there's a clear shot.
+    const clear = clearShot(world, self.pos, target.pos);
+    if (!clear) this.mode = "approach";
     // Swap right away if the current weapon runs dry mid-fight.
     if (self.weapon?.isReloading) input.selectSlot = this.gunner.chooseSlot(self, range);
 
     const aim = this.gunner.aim(self, target);
     input.aimX = aim.x * range; // aim at the target's distance too (grenades land there)
     input.aimY = aim.y * range;
-    input.fire = this.gunner.trigger(self, range);
-    input.back = this.backBrain.hold(self, target, range);
+    input.fire = this.gunner.trigger(self, range, clear);
+    input.back = this.backBrain.hold(self, target, range, clear);
     const lob = input.back ? this.backBrain.lobPoint(self, target) : null;
     if (lob) [input.aimX, input.aimY] = [lob.x - self.pos.x, lob.y - self.pos.y]; // grenade: aim where it will land
     input.target = target.id; // bots "lock on" to what they fight (a sword lunges at it)
     input.reload = this.gunner.wantsReload(self, this.mode === "retreat");
 
-    let move = normalize(add(this.steer(dir, range, preferred), this.wallAvoidance(self, world)));
+    // No clear shot: take the route around the cover. Otherwise fight as usual, sliding off anything close.
+    let move = clear
+      ? avoidObstacles(self, normalize(add(this.steer(dir, range, preferred), this.wallAvoidance(self, world))), world, this.strafeSign)
+      : this.route.direction(self, target.pos, world);
     const dodge = this.threats.update(self, target, this.senses.visibleProjectiles(self, world), world);
     if (dodge) {
       move = dodge;
@@ -102,10 +112,10 @@ export class DuelBot implements Controller {
    */
   private hunt(self: Fighter, world: World, input: Input): Input {
     const contact = this.senses.nearestContact(self, world);
-    const goal = contact?.pos ?? vec(world.width / 2, world.height / 2);
+    const goal = contact?.pos ?? world.center;
     const toGoal = sub(goal, self.pos);
     const arrived = Math.hypot(toGoal.x, toGoal.y) < 60;
-    let move = arrived ? vec() : normalize(add(normalize(toGoal), this.wallAvoidance(self, world)));
+    let move = arrived ? vec() : this.route.direction(self, goal, world);
     const dodge = this.threats.update(self, null, this.senses.visibleProjectiles(self, world), world);
     if (dodge) [move, input.defend] = [dodge, true];
     input.moveX = move.x;
@@ -147,11 +157,8 @@ export class DuelBot implements Controller {
   }
 
   private wallAvoidance(self: Fighter, world: World): Vec2 {
-    const push = vec();
-    if (self.pos.x < WALL_MARGIN) push.x += 1;
-    if (self.pos.x > world.width - WALL_MARGIN) push.x -= 1;
-    if (self.pos.y < WALL_MARGIN) push.y += 1;
-    if (self.pos.y > world.height - WALL_MARGIN) push.y -= 1;
+    // Near the circular wall: head back toward the middle.
+    const push = insideArena(world.arena, self.pos, WALL_MARGIN) ? vec() : normalize(sub(world.center, self.pos));
     // Cornered while strafing: flip direction so we slide out instead of grinding.
     if ((push.x !== 0 || push.y !== 0) && this.rng.chance(0.02)) this.strafeSign *= -1;
     return scale(push, 1.5);

@@ -53,10 +53,15 @@ export class Gunner {
     return vec(dir.x * c - dir.y * s, dir.x * s + dir.y * c);
   }
 
-  /** Trigger state for this tick. Semi-auto weapons need the trigger released between shots. */
-  trigger(self: Fighter, range: number): boolean {
+  /**
+   * Trigger state for this tick. Semi-auto weapons need the trigger released
+   * between shots. With cover in the way (`clear` false) only homing weapons
+   * fire, since their missiles steer around it.
+   */
+  trigger(self: Fighter, range: number, clear = true): boolean {
     const w = self.weapon;
     if (!w || w.isReloading || w.ammo === 0 || range > w.stats.range * 0.9) return false;
+    if (!clear && !(w instanceof HomingWeapon)) return false;
     if (w.stats.fireMode === "auto") return true;
     if (w instanceof ChargeWeapon) return w.chargeFraction < 1; // hold to full charge, then let go to fire
     this.triggerToggle = !this.triggerToggle;

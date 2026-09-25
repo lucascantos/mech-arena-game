@@ -1,7 +1,8 @@
+import type { MapId } from "../maps/gameMap";
 import type { WorldEvent } from "../sim/events";
 import type { Input } from "../sim/input";
 
-/** One fighter's state: [id, x, y, vx, vy, facingX, facingY, hp, weaponSlot, stamina, dash, braceTicksLeft (-1 = none), weapons, back unit]. */
+/** One fighter's state: [id, x, y, vx, vy, facingX, facingY, hp, weaponSlot, energy, dash, braceTicksLeft (-1 = none), weapons, back unit]. */
 export type FighterState = [
   id: number,
   x: number,
@@ -12,7 +13,7 @@ export type FighterState = [
   fy: number,
   hp: number,
   slot: number,
-  stamina: number,
+  energy: number,
   dash: [activeLeft: number, elapsed: number],
   brace: number,
   weapons: number[][],
@@ -39,7 +40,7 @@ export interface Snapshot {
 /** Host → player. */
 export type HostMessage =
   | { t: "lobby"; players: number }
-  | { t: "start"; lineup: string[]; you: number }
+  | { t: "start"; lineup: string[]; you: number; map: MapId }
   | Snapshot;
 
 /** Player → host: that player's input for the current tick. */

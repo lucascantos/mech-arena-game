@@ -21,8 +21,8 @@ export const DEFAULT_DODGE: DodgeConfig = {
 
 /**
  * Quick dash in the movement direction (or the aim direction when standing
- * still). Briefly invulnerable. Costs stamina (more for heavier builds)
- * instead of having a cooldown, so you can chain dashes while stamina lasts.
+ * still). Briefly invulnerable. Costs energy (more for heavier builds)
+ * instead of having a cooldown, so you can chain dashes while energy lasts.
  */
 export class Dodge extends Defense {
   readonly name = "Dodge";
@@ -38,11 +38,11 @@ export class Dodge extends Defense {
   }
 
   protected canActivate(_input: Input, _world: World): boolean {
-    return this.owner.stamina.canAfford(this.owner.stats.dashCost);
+    return this.owner.energy.canAfford(this.owner.stats.dashCost);
   }
 
   protected onActivate(input: Input): void {
-    this.owner.stamina.spend(this.owner.stats.dashCost);
+    this.owner.energy.spend(this.owner.stats.dashCost);
     const move = normalize(vec(input.moveX, input.moveY));
     this.dir = move.x !== 0 || move.y !== 0 ? move : this.owner.facing;
   }

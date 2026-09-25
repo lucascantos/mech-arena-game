@@ -11,11 +11,10 @@ import { drawHud, type HudInfo } from "./hud";
 import { UI } from "./palette";
 import { drawProjectiles } from "./projectileView";
 import { drawLockArea, drawLockOn } from "./lockOnView";
+import { drawMap } from "./mapView";
 import { drawMinimap } from "./minimap";
 import { Radar } from "./radar";
 import { drawRadarArrows } from "./radarArrows";
-
-const GRID = 50;
 
 /** What the camera should do this frame. */
 export interface ViewInfo {
@@ -76,7 +75,7 @@ export class Renderer {
     ctx.rect(v.x, v.y, v.w, v.h);
     ctx.clip();
     this.camera.apply(ctx);
-    this.drawArena(world);
+    drawMap(ctx, world);
     // Private info (HP, dodge, ammo) only for the fighter the camera follows: you, or who you spectate.
     for (const f of world.fighters) drawFighter(ctx, f, alpha, f === focus);
     const aim = view.cursor ? this.camera.screenToWorld(view.cursor) : null; // the cursor is only set while you drive
@@ -124,28 +123,5 @@ export class Renderer {
       this.canvas.width = Math.round(w * dpr);
       this.canvas.height = Math.round(h * dpr);
     }
-  }
-
-  private drawArena(world: World): void {
-    const { ctx } = this;
-    ctx.fillStyle = UI.floor;
-    ctx.fillRect(0, 0, world.width, world.height);
-
-    ctx.strokeStyle = UI.grid;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    for (let x = GRID; x < world.width; x += GRID) {
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, world.height);
-    }
-    for (let y = GRID; y < world.height; y += GRID) {
-      ctx.moveTo(0, y);
-      ctx.lineTo(world.width, y);
-    }
-    ctx.stroke();
-
-    ctx.strokeStyle = UI.wall;
-    ctx.lineWidth = 4;
-    ctx.strokeRect(0, 0, world.width, world.height);
   }
 }
