@@ -10,8 +10,9 @@ const SLOT_KEYS = ["Digit1", "Digit2", "Digit3", "Digit4"];
 /**
  * Turns WASD / Space / mouse / number keys into sim Inputs for one local
  * player. Two schemes: classic (aim at the cursor, WASD moves on the map) and
- * rotating, FPS-style (crosshair fixed in the middle, the mouse turns the
- * view; see TurnAim).
+ * rotating, FPS-style (the mouse turns the view and moves the crosshair
+ * ahead; see TurnAim). While a lock-on aims, the mouse moves a separate
+ * target cursor instead, for picking the next target.
  */
 export class KeyboardController implements Controller {
   /** Rotating-camera controls (see TurnAim). */
@@ -19,8 +20,12 @@ export class KeyboardController implements Controller {
   readonly turn = new TurnAim();
   /** The browser refused to lock the mouse (some embedded views do): it can leave the game. */
   captureRefused = false;
-  /** Set each tick: a lock-on is steering the aim (rotating mode ignores the mouse meanwhile). */
-  lockedOn = false;
+  /** Rotating mode: a lock-on is steering the aim and the view (see setLockedOn). */
+  private lockedOn = false;
+  /** Rotating mode: the aim point in the world (where the crosshair is drawn). */
+  private crosshair: Vec2 | null = null;
+  /** Rotating mode while locked: the target cursor (screen px) the mouse moves to pick the next target. */
+  private targetCursor: Vec2 | null = null;
   private readonly keys = new Set<string>();
   private mouseScreen: Vec2 = { x: 0, y: 0 };
   /** False until the mouse first moves over the canvas (its position is unknown before that). */
@@ -55,12 +60,21 @@ export class KeyboardController implements Controller {
     });
     target.addEventListener("mousemove", (e) => {
       // FPS: the mouse turns the view, except while a lock-on is doing the aiming.
-      if (this.rotating) return this.lockedOn ? undefined : this.turn.mouse(e.movementX, e.movementY);
+      if (this.rotating) {
+        // Uncaptured, the system cursor would stop at the screen edge and turning with it: wait for the click that locks it.
+        if (!this.captured && !this.captureRefused) return;
+        if (this.targetCursor) return this.moveTargetCursor(e.movementX, e.movementY);
+        return this.turn.mouse(e.movementX, e.movementY);
+      }
       this.mouseScreen = { x: e.offsetX, y: e.offsetY };
       this.mouseKnown = true;
     });
     target.addEventListener("mousedown", (e) => {
-      if (this.rotating) this.capture(target); // re-lock after Esc released it
+      if (this.rotating && !this.captured) {
+        const firstTry = !this.captureRefused;
+        this.capture(target); // try again on every click: a refusal without a click can succeed with one
+        if (firstTry) return; // this click only locks the mouse
+      }
       if (e.button === 0) this.mouseDown = this.clickQueued = true;
       if (e.button === 2) this.rightDown = this.rightClickQueued = true;
     });
@@ -75,19 +89,50 @@ export class KeyboardController implements Controller {
     target.addEventListener("contextmenu", (e) => e.preventDefault());
   }
 
-  /** Cursor position in screen (CSS) px (rotating: the crosshair, mid-view), or null before the mouse is known. */
+  /**
+   * The cursor that picks lock-on targets, in screen (CSS) px: the mouse
+   * cursor (classic), the crosshair (rotating), or the target cursor
+   * (rotating, while locked). Null before it's known.
+   */
   get cursor(): Vec2 | null {
-    if (this.rotating) {
-      const v = this.camera.viewport;
-      return Number.isNaN(this.turn.yaw) ? null : { x: v.x + v.w / 2, y: v.y + v.h / 2 };
-    }
+    if (this.rotating) return this.targetCursor ?? this.crosshairOnScreen;
     return this.mouseKnown ? { ...this.mouseScreen } : null;
+  }
+
+  /** Rotating mode: where the crosshair is on screen. */
+  get crosshairOnScreen(): Vec2 | null {
+    return this.crosshair ? this.camera.worldToScreen(this.crosshair) : null;
+  }
+
+  /**
+   * Called every tick with whether a lock-on is aiming. In rotating mode the
+   * view then follows the target (`facing`) and the mouse moves a target
+   * cursor, starting from the crosshair; when the lock ends, the mouse turns
+   * the view again from where the lock left it.
+   */
+  setLockedOn(locked: boolean, facing: Vec2 | null): void {
+    if (!this.rotating) return;
+    if (locked && facing) this.turn.sync(facing);
+    if (locked && !this.lockedOn) this.targetCursor = this.crosshairOnScreen;
+    if (!locked) this.targetCursor = null;
+    this.lockedOn = locked;
+  }
+
+  private moveTargetCursor(dx: number, dy: number): void {
+    const v = this.camera.viewport;
+    const c = this.targetCursor!;
+    this.targetCursor = {
+      x: Math.max(v.x, Math.min(v.x + v.w, c.x + dx)),
+      y: Math.max(v.y, Math.min(v.y + v.h, c.y + dy)),
+    };
   }
 
   /** Classic ↔ rotating controls. Rotating locks the mouse to the game (FPS-style) and hides the cursor. */
   setRotating(on: boolean, canvas: HTMLElement): void {
     this.rotating = on;
     this.turn.reset();
+    this.crosshair = this.targetCursor = null;
+    this.lockedOn = false;
     canvas.style.cursor = on ? "none" : "";
     if (on) this.capture(canvas);
     else if (document.pointerLockElement) document.exitPointerLock();
@@ -98,8 +143,9 @@ export class KeyboardController implements Controller {
     return document.pointerLockElement !== null;
   }
 
-  /** Locks the mouse to the game; needs a click or key press to be allowed. */
-  private capture(canvas: HTMLElement): void {
+  /** Locks the mouse to the game (rotating mode); needs a click or key press to be allowed. */
+  capture(canvas: HTMLElement): void {
+    if (!this.rotating) return;
     if (document.pointerLockElement === canvas) return;
     Promise.resolve(canvas.requestPointerLock())
       .then(() => (this.captureRefused = false))
@@ -119,7 +165,8 @@ export class KeyboardController implements Controller {
     let move = { x: k("KeyD") - k("KeyA"), y: k("KeyS") - k("KeyW") };
     if (this.rotating) {
       if (Number.isNaN(this.turn.yaw)) this.turn.sync(self.facing);
-      aim = this.turn.aimPoint(self.pos);
+      this.turn.viewMultiplier = self.stats.viewMultiplier;
+      aim = this.crosshair = this.turn.aimPoint(self.pos);
       move = this.turn.move(k("KeyW") - k("KeyS"), k("KeyD") - k("KeyA"));
     }
 

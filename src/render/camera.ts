@@ -6,6 +6,8 @@ import { VIEW_HEIGHT, VIEW_WIDTH, type ScreenRect } from "./view";
 const PADDING = 40;
 /** How quickly the camera catches up to its target (per second, exponential). */
 const FOLLOW_SHARPNESS = 10;
+/** FPS-style view: the screen center is this share of the view height ahead of the mech (mech at 3/4 down). */
+const FPS_AHEAD = 0.25;
 export type CameraMode = "follow" | "overview";
 
 /**
@@ -70,14 +72,15 @@ export class Camera {
   }
 
   /**
-   * FPS-style follow: looking along `yaw` (radians) is up the screen, and the
-   * aim point `distance` ahead of `mech` is exactly in the middle (where the
-   * crosshair is). No easing: the view turns with the mouse.
+   * FPS-style follow: looking along `yaw` (radians) is up the screen, with
+   * the mech held 3/4 of the way down so most of the view is ahead of it.
+   * No easing: the view turns with the mouse.
    */
-  followFps(width: number, height: number, mech: Vec2, yaw: number, distance: number, viewMultiplier = 1): void {
-    this.frame(width, height, viewMultiplier);
+  followFps(width: number, height: number, mech: Vec2, yaw: number, viewMultiplier = 1): void {
+    const [, viewH] = this.frame(width, height, viewMultiplier);
     this.rotation = -Math.PI / 2 - yaw; // world direction `yaw` → screen up
-    this.center = { x: mech.x + Math.cos(yaw) * distance, y: mech.y + Math.sin(yaw) * distance };
+    const ahead = viewH * FPS_AHEAD;
+    this.center = { x: mech.x + Math.cos(yaw) * ahead, y: mech.y + Math.sin(yaw) * ahead };
     this.following = true;
   }
 

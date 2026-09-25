@@ -38,6 +38,7 @@ function start(next: Game): void {
   keyboard.clearQueued();
   menu.hide();
   (document.activeElement as HTMLElement | null)?.blur(); // so Enter/Space can't re-press a menu button
+  keyboard.capture(canvas); // FPS camera: lock the mouse now, while the menu click still counts as permission
 }
 
 function backToMenu(status = ""): void {
@@ -149,9 +150,11 @@ startGameLoop(
     const { turn } = keyboard;
     const rotate =
       driving && keyboard.rotating && !Number.isNaN(turn.yaw)
-        ? { yaw: turn.yaw, distance: turn.distance, captured: keyboard.captured, refused: keyboard.captureRefused }
+        ? { yaw: turn.yaw, crosshair: keyboard.crosshairOnScreen, captured: keyboard.captured, refused: keyboard.captureRefused }
         : null;
     const view = { focus: following, cursor: driving ? keyboard.cursor : null, lock: locking ? lockOn : null, rotate };
+    // Classic camera: while locked on, the drawn crosshair shows the aim, so hide the mouse cursor (the lock ring follows it).
+    canvas.style.cursor = keyboard.rotating || (locking && lockOn.targetId !== null) ? "none" : "";
     renderer.render(world, match, game.renderAlpha(alpha), hud, view);
   },
 );

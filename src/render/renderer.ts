@@ -26,7 +26,7 @@ export interface ViewInfo {
   /** Lock-on state; a locked target replaces the cursor lean. Null while spectating. */
   lock: LockOn | null;
   /** FPS-style rotating camera (only while you drive): where you look and how far ahead the aim point is. */
-  rotate: { yaw: number; distance: number; captured: boolean; refused: boolean } | null;
+  rotate: { yaw: number; crosshair: Vec2 | null; captured: boolean; refused: boolean } | null;
 }
 
 /**
@@ -89,7 +89,10 @@ export class Renderer {
     if (view.lock) drawLockOn(ctx, world, view.lock, alpha);
     ctx.restore();
 
-    if (view.rotate && view.cursor) drawCrosshair(ctx, view.cursor);
+    // The crosshair: where a lock-on is aiming (either camera), else the FPS view's aim point.
+    const lockAim = view.lock?.targetId != null ? view.lock.aimPoint : null;
+    const crosshair = lockAim ? this.camera.worldToScreen(lockAim) : view.rotate?.crosshair;
+    if (crosshair) drawCrosshair(ctx, crosshair);
     if (view.rotate && !view.rotate.captured) drawCapturePrompt(ctx, this.cssWidth, this.cssHeight, view.rotate.refused);
     // Lock-on area around the cursor (only while you drive a mech with lock-on on).
     if (view.lock?.enabled && view.cursor && focus) {
@@ -110,7 +113,7 @@ export class Renderer {
     this.lastFrame = now;
     if (this.camera.mode === "follow" && focus && rotate) {
       const mech = lerp(focus.prevPos, focus.pos, alpha);
-      this.camera.followFps(this.cssWidth, this.cssHeight, mech, rotate.yaw, rotate.distance, focus.stats.viewMultiplier);
+      this.camera.followFps(this.cssWidth, this.cssHeight, mech, rotate.yaw, focus.stats.viewMultiplier);
     } else if (this.camera.mode === "follow" && focus) {
       const target = lerp(focus.prevPos, focus.pos, alpha);
       const locked = lock?.targetId == null ? undefined : world.getFighter(lock.targetId);
@@ -155,7 +158,7 @@ function drawCapturePrompt(ctx: CanvasRenderingContext2D, width: number, height:
     : ["Click to lock the mouse to the game"];
   ctx.font = "bold 14px system-ui, sans-serif";
   const w = Math.max(...lines.map((l) => ctx.measureText(l).width)) + 28;
-  const top = height / 2 + 40;
+  const top = height * 0.12; // up top, clear of the mech and the crosshair line
   ctx.fillStyle = "#000000b0";
   ctx.fillRect(width / 2 - w / 2, top, w, 14 + lines.length * 20);
   ctx.fillStyle = refused ? "#d29922" : "#ffffff";

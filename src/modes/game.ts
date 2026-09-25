@@ -43,7 +43,6 @@ export function updateLockOn(game: Game, keyboard: KeyboardController, camera: C
   // No locking during the pre-round countdown (no self = nothing charges, any lock drops).
   const self = match?.inCountdown ? null : game.possessed;
   lockOn.update(world, self, cursor ? camera.screenToWorld(cursor) : null, visible);
-  // Rotating view: while a lock steers the aim, the view turns with it and the mouse does nothing.
-  keyboard.lockedOn = !!self && lockOn.targetId !== null;
-  if (keyboard.rotating && keyboard.lockedOn) keyboard.turn.sync(self!.facing);
+  // Rotating view: while a lock steers the aim, the view follows it and the mouse moves the target cursor.
+  keyboard.setLockedOn(!!self && lockOn.targetId !== null, self?.facing ?? null);
 }

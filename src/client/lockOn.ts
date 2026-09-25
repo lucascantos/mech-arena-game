@@ -37,6 +37,8 @@ export class LockOn {
   /** Q toggles this; while off there is no lock and nothing charges. */
   enabled = true;
   private dwell = 0;
+  /** Where the lock aimed on the last tick (world), for the crosshair; null without a lock. */
+  aimPoint: Vec2 | null = null;
 
   /** 0 → 1 while dwelling on the candidate. */
   get progress(): number {
@@ -53,6 +55,7 @@ export class LockOn {
     this.targetId = null;
     this.candidateId = null;
     this.dwell = 0;
+    this.aimPoint = null;
   }
 
   /**
@@ -93,6 +96,7 @@ export class LockOn {
    */
   aim(world: World, self: Fighter, input: Input): Input {
     const target = this.targetId === null ? undefined : world.getFighter(this.targetId);
+    this.aimPoint = null;
     if (!target?.alive) return input;
     input = { ...input, target: target.id };
     const weapon = self.weapon;
@@ -100,6 +104,7 @@ export class LockOn {
       !weapon || weapon instanceof HomingWeapon
         ? target.pos
         : lerp(target.pos, interceptPoint(self.pos, target.pos, add(target.vel, target.knockback), weapon.stats.projectileSpeed), LEAD);
+    this.aimPoint = point;
     return { ...input, aimX: point.x - self.pos.x, aimY: point.y - self.pos.y };
   }
 
