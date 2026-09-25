@@ -41,6 +41,7 @@ function start(next: Game): void {
 }
 
 function backToMenu(status = ""): void {
+  if (document.pointerLockElement) document.exitPointerLock(); // give the mouse back to the menu
   game?.close();
   game = null;
   renderer.reset();
@@ -123,6 +124,7 @@ window.addEventListener("keydown", (e) => {
   if (e.code === "Escape") backToMenu();
   else if (e.code === "KeyQ") game.lockOn.toggle();
   else if (e.code === "KeyV") renderer.camera.mode = renderer.camera.mode === "follow" ? "overview" : "follow";
+  else if (e.code === "KeyC") keyboard.setRotating(!keyboard.rotating, canvas); // classic ↔ rotating (FPS-style) camera
   else if (e.code === "KeyP") {
     keyboard.clearQueued();
     game.togglePossess();
@@ -144,7 +146,12 @@ startGameLoop(
     // Cursor lean and lock-on only while you're driving a living mech (and not during the countdown).
     const driving = !!possessed?.alive && following === possessed;
     const locking = driving && !match?.inCountdown;
-    const view = { focus: following, cursor: driving ? keyboard.cursor : null, lock: locking ? lockOn : null };
+    const { turn } = keyboard;
+    const rotate =
+      driving && keyboard.rotating && !Number.isNaN(turn.yaw)
+        ? { yaw: turn.yaw, distance: turn.distance, captured: keyboard.captured, refused: keyboard.captureRefused }
+        : null;
+    const view = { focus: following, cursor: driving ? keyboard.cursor : null, lock: locking ? lockOn : null, rotate };
     renderer.render(world, match, game.renderAlpha(alpha), hud, view);
   },
 );

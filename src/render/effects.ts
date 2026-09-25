@@ -1,6 +1,7 @@
 import type { WorldEvent } from "../sim/events";
 import type { Vec2 } from "../sim/vec";
 import { DAMAGE_COLORS, UI } from "./palette";
+import { upright } from "./upright";
 
 interface Effect {
   kind: "impact" | "explosion" | "damage" | "beam" | "slash";
@@ -105,7 +106,7 @@ export class Effects {
         ctx.font = fx.crit ? "bold 22px system-ui, sans-serif" : "bold 16px system-ui, sans-serif";
         ctx.textAlign = "center";
         const text = `${Math.round(fx.value)}${fx.crit ? "!" : ""}`;
-        ctx.fillText(text, fx.pos.x, fx.pos.y - 40 - t * 30);
+        upright(ctx, fx.pos, () => ctx.fillText(text, fx.pos.x, fx.pos.y - 40 - t * 30));
       }
     }
     ctx.globalAlpha = 1;

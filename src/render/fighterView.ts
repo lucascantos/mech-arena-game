@@ -2,6 +2,7 @@ import type { Fighter } from "../sim/fighter";
 import { lerp } from "../sim/vec";
 import { drawBrace } from "./braceView";
 import { shade, UI } from "./palette";
+import { upright } from "./upright";
 
 /**
  * Draws a fighter as its bounding box plus aim line and labels. `showPrivate`
@@ -31,8 +32,10 @@ export function drawFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha: nu
   if (f.alive) {
     drawBrace(ctx, f, p.x, p.y);
     drawAim(ctx, f, p.x, p.y);
-    drawPublicLabel(ctx, f, x, y, w, h, showPrivate);
-    if (showPrivate) drawPrivateBars(ctx, f, x, y, w, h);
+    upright(ctx, p, () => {
+      drawPublicLabel(ctx, f, x, y, w, h, showPrivate);
+      if (showPrivate) drawPrivateBars(ctx, f, x, y, w, h);
+    });
   }
   ctx.globalAlpha = 1;
 }

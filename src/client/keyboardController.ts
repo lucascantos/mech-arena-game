@@ -3,11 +3,24 @@ import type { Fighter } from "../sim/fighter";
 import type { Input } from "../sim/input";
 import type { Vec2 } from "../sim/vec";
 import type { Camera } from "../render/camera";
+import { TurnAim } from "./turnAim";
 
 const SLOT_KEYS = ["Digit1", "Digit2", "Digit3", "Digit4"];
 
-/** Turns WASD / Space / mouse / number keys into sim Inputs for one local player. */
+/**
+ * Turns WASD / Space / mouse / number keys into sim Inputs for one local
+ * player. Two schemes: classic (aim at the cursor, WASD moves on the map) and
+ * rotating, FPS-style (crosshair fixed in the middle, the mouse turns the
+ * view; see TurnAim).
+ */
 export class KeyboardController implements Controller {
+  /** Rotating-camera controls (see TurnAim). */
+  rotating = false;
+  readonly turn = new TurnAim();
+  /** The browser refused to lock the mouse (some embedded views do): it can leave the game. */
+  captureRefused = false;
+  /** Set each tick: a lock-on is steering the aim (rotating mode ignores the mouse meanwhile). */
+  lockedOn = false;
   private readonly keys = new Set<string>();
   private mouseScreen: Vec2 = { x: 0, y: 0 };
   /** False until the mouse first moves over the canvas (its position is unknown before that). */
@@ -41,10 +54,13 @@ export class KeyboardController implements Controller {
       this.mouseDown = this.rightDown = false;
     });
     target.addEventListener("mousemove", (e) => {
+      // FPS: the mouse turns the view, except while a lock-on is doing the aiming.
+      if (this.rotating) return this.lockedOn ? undefined : this.turn.mouse(e.movementX, e.movementY);
       this.mouseScreen = { x: e.offsetX, y: e.offsetY };
       this.mouseKnown = true;
     });
     target.addEventListener("mousedown", (e) => {
+      if (this.rotating) this.capture(target); // re-lock after Esc released it
       if (e.button === 0) this.mouseDown = this.clickQueued = true;
       if (e.button === 2) this.rightDown = this.rightClickQueued = true;
     });
@@ -59,9 +75,35 @@ export class KeyboardController implements Controller {
     target.addEventListener("contextmenu", (e) => e.preventDefault());
   }
 
-  /** Cursor position in screen (CSS) px, or null before the mouse has moved over the game. */
+  /** Cursor position in screen (CSS) px (rotating: the crosshair, mid-view), or null before the mouse is known. */
   get cursor(): Vec2 | null {
+    if (this.rotating) {
+      const v = this.camera.viewport;
+      return Number.isNaN(this.turn.yaw) ? null : { x: v.x + v.w / 2, y: v.y + v.h / 2 };
+    }
     return this.mouseKnown ? { ...this.mouseScreen } : null;
+  }
+
+  /** Classic ↔ rotating controls. Rotating locks the mouse to the game (FPS-style) and hides the cursor. */
+  setRotating(on: boolean, canvas: HTMLElement): void {
+    this.rotating = on;
+    this.turn.reset();
+    canvas.style.cursor = on ? "none" : "";
+    if (on) this.capture(canvas);
+    else if (document.pointerLockElement) document.exitPointerLock();
+  }
+
+  /** True while the mouse is locked to the game. */
+  get captured(): boolean {
+    return document.pointerLockElement !== null;
+  }
+
+  /** Locks the mouse to the game; needs a click or key press to be allowed. */
+  private capture(canvas: HTMLElement): void {
+    if (document.pointerLockElement === canvas) return;
+    Promise.resolve(canvas.requestPointerLock())
+      .then(() => (this.captureRefused = false))
+      .catch(() => (this.captureRefused = true));
   }
 
   /** Drops queued taps, e.g. when taking control so old presses don't fire. */
@@ -73,7 +115,13 @@ export class KeyboardController implements Controller {
 
   readInput(self: Fighter): Input {
     const k = (code: string) => (this.keys.has(code) ? 1 : 0);
-    const aim = this.camera.screenToWorld(this.mouseScreen);
+    let aim = this.camera.screenToWorld(this.mouseScreen);
+    let move = { x: k("KeyD") - k("KeyA"), y: k("KeyS") - k("KeyW") };
+    if (this.rotating) {
+      if (Number.isNaN(this.turn.yaw)) this.turn.sync(self.facing);
+      aim = this.turn.aimPoint(self.pos);
+      move = this.turn.move(k("KeyW") - k("KeyS"), k("KeyD") - k("KeyA"));
+    }
 
     let selectSlot = this.slotQueued;
     if (selectSlot < 0 && this.wheelSteps !== 0 && self.weapons.length > 0) {
@@ -82,8 +130,8 @@ export class KeyboardController implements Controller {
     }
 
     const input: Input = {
-      moveX: k("KeyD") - k("KeyA"),
-      moveY: k("KeyS") - k("KeyW"),
+      moveX: move.x,
+      moveY: move.y,
       aimX: aim.x - self.pos.x,
       aimY: aim.y - self.pos.y,
       fire: this.mouseDown || this.clickQueued, // a quick tap between ticks still fires once

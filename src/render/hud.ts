@@ -57,7 +57,7 @@ export function drawHud(
   const you = world.fighters[0];
   let status: string;
   if (hud.possessed?.alive) {
-    status = `Controlling ${hud.possessed.name}.  WASD move · Space dodge · Click fire · Right-click back unit · 1-4/wheel switch · R reload · Q lock-on · Tab stats · P release · V camera`;
+    status = `Controlling ${hud.possessed.name}.  WASD move · Space dodge · Click fire · Right-click back unit · 1-4/wheel switch · R reload · Q lock-on · Tab stats · P release · V overview · C rotate`;
   } else if (you && !you.alive) {
     const by = hud.killer ? `Destroyed by ${hud.killer.name}` : "Destroyed";
     status = `${by}.  Spectating ${hud.following.name} until the next round · Tab stats`;

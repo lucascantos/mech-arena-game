@@ -1,6 +1,7 @@
 import type { LockOn } from "../client/lockOn";
 import { lerp, type Vec2 } from "../sim/vec";
 import type { World } from "../sim/world";
+import { upright } from "./upright";
 
 const PAD = 10;
 const LOCK_COLOR = "#ff5555";
@@ -46,7 +47,7 @@ export function drawLockOn(ctx: CanvasRenderingContext2D, world: World, lock: Lo
     ctx.fillStyle = LOCK_COLOR;
     ctx.font = "bold 11px ui-monospace, Consolas, monospace";
     ctx.textAlign = "center";
-    ctx.fillText("LOCK", p.x, p.y + hh + 30);
+    upright(ctx, p, () => ctx.fillText("LOCK", p.x, p.y + hh + 30));
   }
 }
 
