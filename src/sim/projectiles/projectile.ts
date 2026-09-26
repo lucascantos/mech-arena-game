@@ -106,7 +106,7 @@ export class Projectile {
       this.impact(world, lerp(this.pos, next, blocked.t), null);
       return;
     }
-    if (hit) {
+    if (hit && !this.passThrough(world, lerp(this.pos, next, hit.t), hit.fighter)) {
       this.rangeLeft -= length(step) * hit.t; // count the partial step, for exact falloff
       this.impact(world, lerp(this.pos, next, hit.t), hit.fighter);
       return;
@@ -119,6 +119,16 @@ export class Projectile {
       const point = clampToArena(world.arena, next);
       this.impact(world, point, null);
     }
+  }
+
+  /** A shot that pierces hits `f` at `at` and returns true to keep flying. Ordinary shots stop (false). */
+  protected passThrough(_world: World, _at: Vec2, _f: Fighter): boolean {
+    return false;
+  }
+
+  /** Fighters this shot passes by without hitting (e.g. ones a piercing slug already went through). */
+  protected ignores(_f: Fighter): boolean {
+    return false;
   }
 
   /** Changes `vel` before moving. Straight by default. */
@@ -170,7 +180,7 @@ export class Projectile {
     if (!this.hitsFighters) return null;
     const pad = this.size / 2;
     for (const f of world.fighters) {
-      if (!f.alive || f.team === this.team || f.invulnerable) continue;
+      if (!f.alive || f.team === this.team || f.invulnerable || this.ignores(f)) continue;
       const half = { x: f.size.x / 2 + pad, y: f.size.y / 2 + pad };
       const t = segmentHitsBox(this.pos, to, f.pos, half);
       if (t !== null && (!best || t < best.t)) best = { fighter: f, t };

@@ -3,7 +3,9 @@ import type { Fighter } from "../sim/fighter";
 import type { MatchView } from "../sim/match";
 import { lerp, type Vec2 } from "../sim/vec";
 import type { World } from "../sim/world";
+import { ChargeWeapon } from "../sim/weapons/chargeWeapon";
 import { drawBackUnits } from "./backView";
+import { drawCrosshair } from "./crosshairView";
 import { Camera } from "./camera";
 import { Effects } from "./effects";
 import { drawFighter } from "./fighterView";
@@ -92,7 +94,11 @@ export class Renderer {
     // The crosshair: where a lock-on is aiming (either camera), else the FPS view's aim point.
     const lockAim = view.lock?.targetId != null ? view.lock.aimPoint : null;
     const crosshair = lockAim ? this.camera.worldToScreen(lockAim) : view.rotate?.crosshair;
-    if (crosshair) drawCrosshair(ctx, crosshair);
+    // Charging a charge weapon: a ring fills around the crosshair (around the mouse cursor when that's the cross).
+    const w = view.cursor ? focus?.weapon : undefined;
+    const charge = w instanceof ChargeWeapon && w.charge > 0 ? w.chargeFraction : null;
+    if (crosshair) drawCrosshair(ctx, crosshair, charge);
+    else if (charge !== null && view.cursor) drawCrosshair(ctx, view.cursor, charge, false);
     if (view.rotate && !view.rotate.captured) drawCapturePrompt(ctx, this.cssWidth, this.cssHeight, view.rotate.refused);
     // Lock-on area around the cursor (only while you drive a mech with lock-on on).
     if (view.lock?.enabled && view.cursor && focus) {
@@ -139,17 +145,6 @@ export class Renderer {
 }
 
 
-/** FPS-style camera: the crosshair, always in the middle of the view. */
-function drawCrosshair(ctx: CanvasRenderingContext2D, p: { x: number; y: number }): void {
-  ctx.strokeStyle = "#ffffff";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-    ctx.moveTo(p.x + dx * 5, p.y + dy * 5);
-    ctx.lineTo(p.x + dx * 13, p.y + dy * 13);
-  }
-  ctx.stroke();
-}
 
 /** FPS-style camera without a locked mouse: say how to lock it (or that this window can't). */
 function drawCapturePrompt(ctx: CanvasRenderingContext2D, width: number, height: number, refused: boolean): void {

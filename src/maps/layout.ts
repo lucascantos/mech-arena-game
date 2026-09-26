@@ -34,7 +34,8 @@ function gap(a: Shape, b: Shape): number {
 
 /**
  * Tries `tries` random shapes from `make`, keeping those that fit in the
- * arena, pass `where` and stay `spacing` away from everything in `placed`.
+ * arena, pass `where` and stay `spacing` away from everything in `placed`,
+ * up to `max` of them.
  */
 export function scatter(
   tries: number,
@@ -43,9 +44,10 @@ export function scatter(
   spacing: number,
   placed: Shape[],
   where: (s: Shape) => boolean = () => true,
+  max = Infinity,
 ): Shape[] {
   const out: Shape[] = [];
-  for (let i = 0; i < tries; i++) {
+  for (let i = 0; i < tries && out.length < max; i++) {
     const s = make();
     if (!fitsInArena(s, radius, WALL_CLEARANCE) || !where(s)) continue;
     if (placed.some((p) => gap(p, s) < spacing)) continue;

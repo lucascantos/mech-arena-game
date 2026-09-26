@@ -5,8 +5,8 @@ import { HEAVY_TORSO, LIGHT_TORSO, MEDIUM_TORSO, type Torso } from "../sim/parts
 import type { BackUnitClass } from "../sim/back/backUnit";
 import { PulseShield } from "../sim/back/pulseShield";
 import {
-  BurstRifle, EnergyRifle, EnergySword, GatlingGun, GrenadeLauncher, LaserCannon, LinearRifle, MachineGun, MissileLauncher, MultiLockLauncher,
-  PlasmaRifle, Shotgun, SubmachineGun, type WeaponClass,
+  EnergyRifle, EnergySword, GatlingGun, GrenadeLauncher, LaserCannon, LinearRifle, MachineGun, MissileLauncher, MultiLockLauncher,
+  Shotgun, SubmachineGun, type WeaponClass,
 } from "../sim/weapons/catalog";
 
 /**
@@ -112,25 +112,14 @@ export const PRESETS: MechPreset[] = [
     personality: AGGRESSIVE,
   },
   {
-    // Mid-range rifleman: bursts to pressure, charged slugs to punish.
+    // Mid-range rifleman: steady fire to pressure, charged slugs to punish.
     id: "ranger",
     name: "Ranger",
     legs: BIPEDAL,
     torso: MEDIUM_TORSO,
     head: SCOUT_HEAD,
-    weapons: [BurstRifle, LinearRifle],
+    weapons: [MachineGun, LinearRifle],
     back: MissileLauncher,
-    personality: BALANCED,
-  },
-  {
-    // Slow splash-damage tank.
-    id: "plasma-tank",
-    name: "Plasma Tank",
-    legs: TREADS,
-    torso: HEAVY_TORSO,
-    head: STANDARD_HEAD,
-    weapons: [PlasmaRifle, BurstRifle, SubmachineGun],
-    back: GrenadeLauncher,
     personality: BALANCED,
   },
   {

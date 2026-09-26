@@ -24,6 +24,8 @@ export class Weapon<S extends WeaponStats = WeaponStats> implements BackUnit {
   ammo: number;
   protected shotCooldown = 0;
   private reloadLeft = 0;
+  /** Length of the reload in progress (ticks); a partial one can be shorter than the full reload time. */
+  private reloadTotal = 0;
   /** Extra spread in degrees from recent shots. */
   private bloom = 0;
   protected triggerWasHeld = false;
@@ -69,7 +71,7 @@ export class Weapon<S extends WeaponStats = WeaponStats> implements BackUnit {
   /** 0 when a reload just started, 1 when finished. */
   get reloadProgress(): number {
     if (!this.isReloading) return 1;
-    return 1 - this.reloadLeft / secondsToTicks(this.stats.reloadTime);
+    return 1 - this.reloadLeft / (this.reloadTotal || secondsToTicks(this.stats.reloadTime));
   }
 
   /** Current cone width in degrees (base spread + recoil bloom). */
@@ -89,9 +91,10 @@ export class Weapon<S extends WeaponStats = WeaponStats> implements BackUnit {
     if (this.reloadLeft > 0 && --this.reloadLeft === 0) this.ammo = this.stats.magazine;
   }
 
-  startReload(): void {
+  /** Starts reloading; `seconds` defaults to the full reload time (melee combos use a partial one). */
+  startReload(seconds = this.stats.reloadTime): void {
     if (this.isReloading || this.ammo >= this.stats.magazine) return;
-    this.reloadLeft = secondsToTicks(this.stats.reloadTime);
+    this.reloadLeft = this.reloadTotal = Math.max(1, secondsToTicks(seconds));
   }
 
   /** Called when the weapon is put away; a half-finished reload is lost. */

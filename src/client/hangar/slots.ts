@@ -72,14 +72,12 @@ export function slotsOf(build: Build): Slot[] {
   build.hand.forEach((W, i) => {
     const set = (b: Build, C: (typeof HAND_WEAPONS)[number] | null) => ({ ...b, hand: b.hand.map((x, j) => (j === i ? C : x)) });
     const options: Option[] = HAND_WEAPONS.map((C) => ({ label: unitName(C), apply: (b) => set(b, C), unit: new C(), equipped: C === W }));
-    const othersEmpty = build.hand.every((x, j) => j === i || x === null);
-    if (!othersEmpty) options.push({ label: "Empty", apply: (b) => set(b, null), unit: null, equipped: W === null });
-    slots.push({ id: handSlot(i), label: `Hand ${i + 1}`, current: W ? unitName(W) : "Empty", options, unit: W ? new W() : null });
+    slots.push({ id: handSlot(i), label: `Hand Weapon ${i + 1}`, current: W ? unitName(W) : "Empty", options, unit: W ? new W() : null });
   });
 
   slots.push({
     id: "back",
-    label: "Back",
+    label: "Back Weapon",
     current: unitName(build.back),
     options: BACK_UNITS.map((C) => ({ label: unitName(C), apply: (b) => ({ ...b, back: C }), unit: new C(), equipped: C === build.back })),
     unit: new build.back(),

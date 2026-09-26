@@ -11,7 +11,7 @@ export const TORSOS: readonly Torso[] = [LIGHT_TORSO, MEDIUM_TORSO, HEAVY_TORSO]
 export const HEADS: readonly Head[] = [STANDARD_HEAD, SCOUT_HEAD, HUNTER_HEAD];
 
 export const HAND_WEAPONS: readonly W.WeaponClass[] = [
-  W.MachineGun, W.SubmachineGun, W.Shotgun, W.BurstRifle, W.EnergyRifle, W.LinearRifle, W.PlasmaRifle, W.RocketLauncher,
+  W.MachineGun, W.SubmachineGun, W.Pistol, W.Shotgun, W.EnergyRifle, W.LinearRifle, W.Railgun, W.ArmCannon, W.RocketLauncher,
   W.EnergySword,
 ];
 

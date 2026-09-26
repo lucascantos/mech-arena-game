@@ -36,6 +36,7 @@ export class LaserCannon extends ChargeWeapon {
       chargeTime: 1.2,
       minPower: 0.25,
       chargingSpeed: 0.7,
+      chargeTell: "aimLine",
     });
   }
 

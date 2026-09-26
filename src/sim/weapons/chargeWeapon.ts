@@ -13,6 +13,11 @@ export interface ChargeWeaponStats extends WeaponStats {
   minPower: number;
   /** Move speed multiplier while charging. */
   chargingSpeed: number;
+  /**
+   * What everyone sees while it charges: an aiming line (the laser's
+   * warning), energy gathering into the mech (Mega Man style), or nothing.
+   */
+  chargeTell: "aimLine" | "gather" | "none";
 }
 
 /**

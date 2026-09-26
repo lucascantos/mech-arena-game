@@ -3,6 +3,7 @@ import type { Fighter } from "../sim/fighter";
 import { lerp, type Vec2 } from "../sim/vec";
 import { GRENADE_MIN_DISTANCE, GrenadeLauncher } from "../sim/weapons/grenadeLauncher";
 import { ChargeWeapon } from "../sim/weapons/chargeWeapon";
+import { drawGather } from "./chargeGather";
 import { MultiLockLauncher } from "../sim/weapons/multiLockLauncher";
 import type { World } from "../sim/world";
 import { DAMAGE_COLORS, UI } from "./palette";
@@ -20,7 +21,11 @@ export function drawBackUnits(ctx: CanvasRenderingContext2D, world: World, alpha
     const p = lerp(f.prevPos, f.pos, alpha);
     if (f.back instanceof PulseShield && f.back.raised) drawShield(ctx, f, f.back, p);
     // Any charging weapon, hand or back, shows its aiming line.
-    for (const w of [f.weapon, f.back]) if (w instanceof ChargeWeapon && w.charge > 0) drawCharge(ctx, f, w, p);
+    for (const w of [f.weapon, f.back]) {
+      if (!(w instanceof ChargeWeapon) || w.charge <= 0) continue;
+      if (w.stats.chargeTell === "aimLine") drawCharge(ctx, f, w, p);
+      else if (w.stats.chargeTell === "gather") drawGather(ctx, f, w.chargeFraction, p);
+    }
   }
   if (!own?.alive) return;
   const pos = lerp(own.prevPos, own.pos, alpha);

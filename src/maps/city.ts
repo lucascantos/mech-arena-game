@@ -8,14 +8,16 @@ const HIGHWAY = 130;
 /** Building grid: one block per cell, streets in between. */
 const CELL = 260;
 
+/** Wrecked cars on the highway. */
+const CARS = 3;
 /** Wrecked cars: anything wears them down, and they go up in a big blast. */
-const CAR: Durability = { hp: 90, explosiveOnly: false, blast: { radius: 120, damage: 45, knockback: 450 } };
+const CAR: Durability = { hp: 20, explosiveOnly: false, blast: { radius: 120, damage: 45, knockback: 450 } };
 /** Buildings: only explosions bring them down (about 8 rockets, or a couple of nearby car blasts and change). */
 const BUILDING: Durability = { hp: 240, explosiveOnly: true };
 
 /**
- * Abandoned City, in three parts: a highway across the middle (median
- * barriers with gaps, wrecked cars on the lanes), a park to the north (trees,
+ * Abandoned City, in three parts: a highway across the middle (wrecked cars
+ * on the lanes), a park to the north (trees,
  * hedges, a pond: soft, scattered cover) and city blocks to the south (a grid
  * of buildings with streets between them, a few empty lots). Cars can be
  * shot up and explode; buildings only fall to explosions.
@@ -26,19 +28,15 @@ export function buildCity(radius: number, rng: Rng): MapLayout {
   const decor: Decor[] = [];
   const placed: Shape[] = [];
 
-  // Highway: road, lane markings, a broken median, wrecks.
+  // Highway: road, lane markings, wrecks.
   decor.push(flat(box(c, c, radius * 2, HIGHWAY * 2), "road"));
   for (let x = 0; x < radius * 2; x += 120) {
     decor.push(flat(box(x, c - HIGHWAY / 2, 50, 5), "lane"), flat(box(x, c + HIGHWAY / 2, 50, 5), "lane"));
   }
-  for (let x = 90; x < radius * 2; x += 280) {
-    const s = box(x, c, 190, 16);
-    if (fitsInArena(s, radius, WALL_CLEARANCE)) (obstacles.push(solid(s, "barrier")), placed.push(s));
-  }
-  const cars = scatter(Math.round(radius / 40), () => {
+  const cars = scatter(40, () => {
     const lane = rng.chance(0.5) ? -1 : 1;
     return box(rng.range(0, radius * 2), c + lane * rng.range(45, 95), 78, 38);
-  }, radius, 40, placed);
+  }, radius, 40, placed, () => true, CARS);
   for (const s of cars) obstacles.push({ ...solid(s, "car"), durability: CAR });
 
   // Park (north): grass, a pond, hedges and trees.
@@ -46,12 +44,12 @@ export function buildCity(radius: number, rng: Rng): MapLayout {
   decor.push(flat(box(c, (c - HIGHWAY) / 2, radius * 2, c - HIGHWAY), "grass"));
   decor.push(flat(circle(c - radius * 0.25, c - radius * 0.55, radius * 0.13), "pond"));
   placed.push(circle(c - radius * 0.25, c - radius * 0.55, radius * 0.13 + 20));
-  const hedges = scatter(Math.round(radius / 60), () => {
+  const hedges = scatter(Math.round(radius / 150), () => {
     const long = rng.range(110, 200);
     return rng.chance(0.5) ? box(rng.range(0, 2 * c), rng.range(0, c), long, 22) : box(rng.range(0, 2 * c), rng.range(0, c), 22, long);
   }, radius, 110, placed, north);
   for (const s of hedges) obstacles.push(solid(s, "hedge"));
-  const trees = scatter(Math.round((radius * radius) / 9000), () => circle(rng.range(0, 2 * c), rng.range(0, c), rng.range(22, 36)), radius, 70, placed, north);
+  const trees = scatter(Math.round((radius * radius) / 20000), () => circle(rng.range(0, 2 * c), rng.range(0, c), rng.range(22, 36)), radius, 70, placed, north);
   for (const s of trees) obstacles.push(solid(s, "tree"));
 
   // City blocks (south): a grid of buildings; some lots are empty plazas.
@@ -62,7 +60,7 @@ export function buildCity(radius: number, rng: Rng): MapLayout {
       const h = rng.range(150, 190);
       const s = box(x, y, w, h);
       if (!fitsInArena(s, radius, WALL_CLEARANCE)) continue;
-      if (rng.chance(0.2)) {
+      if (rng.chance(0.45)) {
         decor.push(flat(s, "plaza"));
         continue;
       }

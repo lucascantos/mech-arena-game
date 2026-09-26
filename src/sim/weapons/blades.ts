@@ -1,6 +1,6 @@
 import { MeleeWeapon } from "./meleeWeapon";
 
-/** Lunges at the locked target and sweeps a wide arc. Big hit and shove, no ammo, 0.8s between strikes. */
+/** Lunges at the locked target and sweeps a wide arc: combos of up to 3 quick swings; the next combo is ready 1s after the last swing. */
 export class EnergySword extends MeleeWeapon {
   constructor() {
     super({
@@ -10,9 +10,9 @@ export class EnergySword extends MeleeWeapon {
       damageType: "energy",
       damage: 55,
       fireMode: "semi",
-      fireRate: 1 / 0.8,
-      magazine: 1,
-      reloadTime: 0,
+      fireRate: 5,
+      magazine: 3, // swings per combo
+      reloadTime: 1, // next combo ready 1s after the last swing
       pellets: 1,
       spread: 0,
       recoil: 0,

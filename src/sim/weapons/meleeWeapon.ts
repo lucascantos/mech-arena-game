@@ -16,32 +16,50 @@ export interface MeleeWeaponStats extends WeaponStats {
   arc: number;
 }
 
+/** Not swinging again within this long (seconds) ends an unfinished combo. */
+const COMBO_WINDOW = 0.5;
 /** A lunge stops this far short of the target's box, so the strike lands at the edge instead of ramming it. */
 const LUNGE_GAP = 20;
 const DEG = Math.PI / 180;
 
 /**
- * A weapon that strikes instead of shooting: no ammo, just a cooldown
- * (fireRate). Each click lunges toward the locked target (up to a dash's
- * distance, shorter the closer it already is; in place with no lock), then
- * sweeps an arc in front, hitting every enemy inside it.
+ * A weapon that strikes instead of shooting. It swings in combos: the
+ * magazine is how many swings a combo has (fireRate apart). The next combo is
+ * always ready one reload time after the last swing: a full combo recovers
+ * for the whole reload right away; an unfinished one stays open for
+ * COMBO_WINDOW (to continue it), then recovers for the rest. Each click lunges toward the locked target (up to a
+ * dash's distance, shorter the closer it already is; in place with no lock),
+ * then sweeps an arc in front, hitting every enemy inside it.
  */
 export class MeleeWeapon<S extends MeleeWeaponStats = MeleeWeaponStats> extends Weapon<S> {
   readonly lunge = new Lunge(this);
+  /** Ticks since the last swing (ends the combo after COMBO_WINDOW). */
+  private idle = 0;
 
   get ability(): Ability {
     return this.lunge;
   }
 
+  /** Swings left in the combo, or the cooldown after it. */
   get status(): string {
-    return this.shotCooldown > 0 || this.lunge.isActive ? "RECOVERING" : "READY";
+    return this.isReloading ? `COOLDOWN ${Math.round(this.reloadProgress * 100)}%` : `COMBO ${this.ammo}/${this.stats.magazine}`;
+  }
+
+  /** Timers, plus ending an unfinished combo once COMBO_WINDOW passes without a swing. */
+  update(owner?: Fighter): void {
+    super.update(owner);
+    if (this.ammo < this.stats.magazine && !this.isReloading && ++this.idle >= secondsToTicks(COMBO_WINDOW)) {
+      this.startReload(Math.max(0, this.stats.reloadTime - COMBO_WINDOW)); // the window already counted toward it
+    }
   }
 
   trigger(held: boolean, owner: Fighter, world: World): void {
     const pressed = held && !this.triggerWasHeld;
     this.triggerWasHeld = held;
-    if (!pressed || this.shotCooldown > 0 || this.lunge.isActive) return;
+    if (!pressed || !this.ready || this.lunge.isActive) return;
+    this.idle = 0;
     this.shotCooldown = Math.max(1, secondsToTicks(1 / this.stats.fireRate));
+    if (--this.ammo === 0) this.startReload(); // combo spent: the full recovery, right away
     world.emit({ kind: "shot", ownerId: owner.id, count: 1 });
 
     const target = world.getFighter(owner.lockTarget);
@@ -72,6 +90,7 @@ export class MeleeWeapon<S extends MeleeWeaponStats = MeleeWeaponStats> extends 
   reset(): void {
     super.reset();
     this.lunge.reset();
+    this.idle = 0;
   }
 }
 

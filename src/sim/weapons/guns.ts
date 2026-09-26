@@ -8,10 +8,10 @@ export class MachineGun extends Weapon {
       shortName: "MG",
       mount: "hand",
       damageType: "bullet",
-      damage: 4,
+      damage: 5,
       fireMode: "auto",
       fireRate: 12,
-      magazine: 40,
+      magazine: 50,
       reloadTime: 2.0,
       pellets: 1,
       spread: 4,
@@ -86,6 +86,36 @@ export class EnergyRifle extends Weapon {
       knockback: 40,
       selfStagger: 0,
       weight: 14,
+    });
+  }
+}
+
+/** A light sidearm: quick, accurate semi-auto shots. Like a rifle that trades punch for speed. */
+export class Pistol extends Weapon {
+  constructor() {
+    super({
+      name: "Pistol",
+      shortName: "PT",
+      mount: "hand",
+      damageType: "bullet",
+      damage: 9,
+      fireMode: "semi",
+      fireRate: 4,
+      magazine: 12,
+      reloadTime: 1.4,
+      pellets: 1,
+      spread: 1.5,
+      recoil: 2,
+      maxRecoil: 6,
+      recoilRecovery: 14,
+      projectileSpeed: 1500,
+      projectileSize: 5,
+      range: 1400,
+      falloffStart: 600,
+      falloffMin: 0.5,
+      knockback: 25,
+      selfStagger: 0,
+      weight: 7,
     });
   }
 }
