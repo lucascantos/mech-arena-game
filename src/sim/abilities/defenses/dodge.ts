@@ -51,6 +51,11 @@ export class Dodge extends Defense {
     this.owner.vel = scale(this.dir, this.config.speed * this.owner.stats.dashSpeedMultiplier);
   }
 
+  /** The dash ends at walking speed, so control comes back right away instead of sliding it off. */
+  protected onEnd(): void {
+    this.owner.vel = scale(this.dir, this.owner.stats.moveSpeed);
+  }
+
   controlsMovement(): boolean {
     return this.isActive;
   }

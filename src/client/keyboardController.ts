@@ -170,6 +170,9 @@ export class KeyboardController implements Controller {
       move = this.turn.move(k("KeyW") - k("KeyS"), k("KeyD") - k("KeyA"));
     }
 
+    // Boost steering follows the cursor (mouse, or FPS crosshair / target cursor), never the lock's aim.
+    const steer = this.cursor ? this.camera.screenToWorld(this.cursor) : aim;
+
     let selectSlot = this.slotQueued;
     if (selectSlot < 0 && this.wheelSteps !== 0 && self.weapons.length > 0) {
       const n = self.weapons.length;
@@ -187,6 +190,9 @@ export class KeyboardController implements Controller {
       selectSlot,
       defend: this.dodgeQueued,
       target: -1, // the lock-on fills this in
+      boost: this.keys.has("ShiftLeft") || this.keys.has("ShiftRight"),
+      steerX: steer.x - self.pos.x,
+      steerY: steer.y - self.pos.y,
     };
     this.clearQueued();
     return input;

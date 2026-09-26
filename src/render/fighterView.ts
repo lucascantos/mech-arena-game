@@ -1,6 +1,7 @@
 import type { Fighter } from "../sim/fighter";
 import { lerp } from "../sim/vec";
 import { drawBrace } from "./braceView";
+import { drawThrusters } from "./thrusterView";
 import { shade, UI } from "./palette";
 import { upright } from "./upright";
 
@@ -17,6 +18,8 @@ export function drawFighter(ctx: CanvasRenderingContext2D, f: Fighter, alpha: nu
   const y = p.y - h / 2;
   const dashing = f.defense?.controlsMovement() ?? false;
   const base = f.alive ? 1 : 0.25;
+
+  if (f.alive) drawThrusters(ctx, f, p); // under the body
 
   // Body: the bounding box. Fades while dashing so the dodge reads clearly.
   ctx.globalAlpha = base * (dashing ? 0.35 : 0.85);

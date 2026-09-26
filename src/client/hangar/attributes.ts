@@ -1,6 +1,7 @@
 import { DEFAULT_DODGE } from "../../sim/abilities/defenses/dodge";
 import type { Fighter } from "../../sim/fighter";
 import { BACK_UNITS, HAND_WEAPONS, HEADS, LEGS, TORSOS } from "../../presets/partCatalog";
+import { BASE_DASH_COST } from "../../sim/parts/stats";
 
 /** One number about the whole mech, shown in the picker and as a bar in the review. */
 export interface Attribute {
@@ -48,7 +49,7 @@ export const STABILITY: Attribute = {
 export const ENERGY: Attribute = {
   label: "Energy",
   value: (f) => f.stats.maxEnergy / f.stats.dashCost,
-  max: 100 / (35 * (lightest / 60)),
+  max: 100 / (BASE_DASH_COST * (lightest / 60)),
   format: (v, f) => `${v.toFixed(1)} dashes · ${Math.round(f.stats.energyRegen)}/s`,
   better: "higher",
 };

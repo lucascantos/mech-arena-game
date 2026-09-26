@@ -1,6 +1,7 @@
 import type { Ability } from "./abilities/ability";
 import type { BackUnit } from "./back/backUnit";
 import type { Defense } from "./abilities/defense";
+import { Booster } from "./booster";
 import type { Brace } from "./brace";
 import { DT } from "./constants";
 import { Loadout } from "./loadout";
@@ -55,6 +56,7 @@ export class Fighter {
   readonly energy: Energy;
   /** Set while recovering from a heavy weapon's self-stagger. */
   brace: Brace | null = null;
+  readonly booster = new Booster();
 
   constructor(config: FighterConfig) {
     this.id = config.id;
@@ -172,12 +174,12 @@ export class Fighter {
       this.facing = rotateToward(this.facing, aim, this.stats.turnRate * DEG * DT);
     }
 
-    if (input.defend) this.defense?.tryActivate(input, world);
+    if (input.defend && this.defense?.tryActivate(this.booster.dashInput(input), world)) this.booster.snap(input);
     if (!this.brace) this.loadout.handleInput(input, this, world);
 
     if (this.brace) {
       this.vel = vec(); // rooted; only knockback can move a braced mech
-    } else if (!this.abilities.some((a) => a.controlsMovement())) {
+    } else if (!this.abilities.some((a) => a.controlsMovement()) && !this.booster.steer(this, input, world)) {
       const speed = this.stats.moveSpeed * this.loadout.moveMultiplier;
       const desired = scale(clampUnit(vec(input.moveX, input.moveY)), speed);
       this.vel = approach(this.vel, desired, this.stats.acceleration * world.map.grip * DT); // ice: less grip, slides

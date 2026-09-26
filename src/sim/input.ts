@@ -21,6 +21,11 @@ export interface Input {
   defend: boolean;
   /** Id of the enemy locked on to, or -1 (melee lunges at it). */
   target: number;
+  /** Boost key held: drive toward the steering point instead of walking. */
+  boost: boolean;
+  /** Steering point relative to the mech (the mouse cursor, not the crosshair). */
+  steerX: number;
+  steerY: number;
 }
 
 export const emptyInput = (): Input => ({
@@ -34,4 +39,7 @@ export const emptyInput = (): Input => ({
   selectSlot: -1,
   defend: false,
   target: -1,
+  boost: false,
+  steerX: 0,
+  steerY: 0,
 });
