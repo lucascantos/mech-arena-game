@@ -24,6 +24,10 @@ export const UI = {
   outside: "#05070acc",
   zoneWall: "#f85149",
   minimapObstacle: "#3a434f",
+  /** What destroyed cover leaves behind. */
+  rubble: "#2a2d33",
+  scorch: "#1c1714",
+  dust: "#9aa0a6",
 };
 
 /** Darker variant of a #rrggbb color for outlines. */

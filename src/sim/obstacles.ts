@@ -8,10 +8,25 @@ export type Shape = { kind: "box"; x: number; y: number; w: number; h: number } 
 /** What an obstacle looks like; the map's theme decides the colors. */
 export type ObstacleLook = "building" | "car" | "barrier" | "tree" | "hedge" | "rock" | "ice" | "pillar" | "wall" | "statue";
 
+/** How a destructible obstacle takes damage and what happens when it goes. */
+export interface Durability {
+  hp: number;
+  /** Only explosions hurt it (buildings); otherwise any hit does (cars). */
+  explosiveOnly: boolean;
+  /** It explodes when destroyed (cars). */
+  blast?: { radius: number; damage: number; knockback: number };
+}
+
 /** Something solid on the map: stops mechs and shots, but not sight (the view is top-down). */
 export interface Obstacle {
   shape: Shape;
   look: ObstacleLook;
+  /** Destructible, and how (see cover.ts). Indestructible without it. */
+  durability?: Durability;
+  /** Current HP (destructible ones, set by the world). */
+  hp?: number;
+  /** Index in the world's obstacle list at round start, to sync destruction online. */
+  id?: number;
 }
 
 /** Where the segment a→b first touches the shape grown by `pad`, as a fraction of the path, or null. */
@@ -31,22 +46,30 @@ export function segmentHitsShape(a: Vec2, b: Vec2, s: Shape, pad = 0): number | 
   return t >= 0 && t <= 1 ? t : null;
 }
 
-/** The first obstacle on the segment a→b (shots use `pad` = their half size), or null. */
-export function firstObstacleHit(obstacles: readonly Obstacle[], a: Vec2, b: Vec2, pad = 0): number | null {
-  let best: number | null = null;
+/** The first obstacle on the segment a→b (shots use `pad` = their half size) and where, or null. */
+export function firstObstacle(obstacles: readonly Obstacle[], a: Vec2, b: Vec2, pad = 0): { t: number; obstacle: Obstacle } | null {
+  let best: { t: number; obstacle: Obstacle } | null = null;
   for (const o of obstacles) {
     const t = segmentHitsShape(a, b, o.shape, pad);
-    if (t !== null && (best === null || t < best)) best = t;
+    if (t !== null && (!best || t < best.t)) best = { t, obstacle: o };
   }
   return best;
 }
 
+/** Where on the segment a→b the first obstacle is, as a fraction of the path, or null. */
+export function firstObstacleHit(obstacles: readonly Obstacle[], a: Vec2, b: Vec2, pad = 0): number | null {
+  return firstObstacle(obstacles, a, b, pad)?.t ?? null;
+}
+
+/** Distance from `p` to the nearest point of the shape (0 inside). */
+export function shapeDistance(s: Shape, p: Vec2): number {
+  if (s.kind === "circle") return Math.max(0, Math.hypot(p.x - s.x, p.y - s.y) - s.r);
+  return Math.hypot(Math.max(Math.abs(p.x - s.x) - s.w / 2, 0), Math.max(Math.abs(p.y - s.y) - s.h / 2, 0));
+}
+
 /** True if a circle at `p` with radius `r` overlaps the shape (for keeping spawn points clear). */
 export function shapeNear(s: Shape, p: Vec2, r: number): boolean {
-  if (s.kind === "circle") return Math.hypot(p.x - s.x, p.y - s.y) < s.r + r;
-  const dx = Math.max(Math.abs(p.x - s.x) - s.w / 2, 0);
-  const dy = Math.max(Math.abs(p.y - s.y) - s.h / 2, 0);
-  return Math.hypot(dx, dy) < r;
+  return shapeDistance(s, p) < r;
 }
 
 /** Moves a fighter (its bounding box) out of the shape, along the shortest way out. */

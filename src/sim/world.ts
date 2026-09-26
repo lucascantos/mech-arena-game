@@ -19,7 +19,11 @@ export class World {
   /** The circular wall: the map's full circle, unless a battle royale Zone is closing it in. */
   arena: ArenaCircle;
   /** Solid things on the map (stop mechs and shots). */
-  obstacles: Obstacle[];
+  obstacles: Obstacle[] = [];
+  /** Cover destroyed this round, left as rubble (drawn, not solid). */
+  destroyed: Obstacle[] = [];
+  /** The obstacles at round start (after spawn clearing), to restore each round. */
+  private roundStart: Obstacle[] = [];
   /** The square around the arena circle. */
   readonly width: number;
   readonly height: number;
@@ -41,7 +45,7 @@ export class World {
     this.rng = new Rng(seed);
     this.width = this.height = map.radius * 2;
     this.arena = this.fullArena();
-    this.obstacles = [...map.obstacles];
+    this.restoreCover(map.obstacles);
   }
 
   fullArena(): ArenaCircle {
@@ -54,7 +58,28 @@ export class World {
 
   /** Removes obstacles on or near the spawn points, so nobody starts inside a wall. */
   clearSpawns(clearance: number): void {
-    this.obstacles = this.obstacles.filter((o) => !this.spawnPoints.some((p) => shapeNear(o.shape, p, clearance)));
+    this.restoreCover(this.roundStart.filter((o) => !this.spawnPoints.some((p) => shapeNear(o.shape, p, clearance))));
+  }
+
+  /** Takes a destroyed obstacle out of play (it stays as rubble until the round ends). */
+  destroyObstacle(o: Obstacle): void {
+    this.obstacles = this.obstacles.filter((x) => x !== o);
+    this.destroyed.push(o);
+    this.emit({ kind: "coverDestroyed", pos: { x: o.shape.x, y: o.shape.y }, look: o.look });
+  }
+
+  /** Online: mirrors the host's destroyed cover (by id). */
+  syncDestroyed(ids: readonly number[]): void {
+    const gone = new Set(ids);
+    this.obstacles = this.roundStart.filter((o) => !gone.has(o.id!));
+    this.destroyed = this.roundStart.filter((o) => gone.has(o.id!));
+  }
+
+  /** Puts `cover` back in play, intact, with fresh HP and ids. */
+  private restoreCover(cover: readonly Obstacle[]): void {
+    this.roundStart = cover.map((o, id) => ({ ...o, id, hp: o.durability?.hp }));
+    this.obstacles = [...this.roundStart];
+    this.destroyed = [];
   }
 
   addFighter(fighter: Fighter): Fighter {
@@ -111,6 +136,7 @@ export class World {
   resetRound(round: number): void {
     this.projectiles = [];
     this.arena = this.fullArena();
+    this.restoreCover(this.roundStart);
     this.assignSpawns(round);
     for (const f of this.fighters) f.respawn();
   }

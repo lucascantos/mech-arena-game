@@ -1,4 +1,4 @@
-import type { Obstacle, Shape } from "../sim/obstacles";
+import type { Durability, Obstacle, Shape } from "../sim/obstacles";
 import type { Rng } from "../sim/rng";
 import type { Decor, MapLayout } from "./gameMap";
 import { box, circle, fitsInArena, flat, scatter, solid, WALL_CLEARANCE } from "./layout";
@@ -8,11 +8,17 @@ const HIGHWAY = 130;
 /** Building grid: one block per cell, streets in between. */
 const CELL = 260;
 
+/** Wrecked cars: anything wears them down, and they go up in a big blast. */
+const CAR: Durability = { hp: 90, explosiveOnly: false, blast: { radius: 120, damage: 45, knockback: 450 } };
+/** Buildings: only explosions bring them down (about 8 rockets, or a couple of nearby car blasts and change). */
+const BUILDING: Durability = { hp: 240, explosiveOnly: true };
+
 /**
  * Abandoned City, in three parts: a highway across the middle (median
  * barriers with gaps, wrecked cars on the lanes), a park to the north (trees,
  * hedges, a pond: soft, scattered cover) and city blocks to the south (a grid
- * of buildings with streets between them, a few empty lots).
+ * of buildings with streets between them, a few empty lots). Cars can be
+ * shot up and explode; buildings only fall to explosions.
  */
 export function buildCity(radius: number, rng: Rng): MapLayout {
   const c = radius;
@@ -33,7 +39,7 @@ export function buildCity(radius: number, rng: Rng): MapLayout {
     const lane = rng.chance(0.5) ? -1 : 1;
     return box(rng.range(0, radius * 2), c + lane * rng.range(45, 95), 78, 38);
   }, radius, 40, placed);
-  for (const s of cars) obstacles.push(solid(s, "car"));
+  for (const s of cars) obstacles.push({ ...solid(s, "car"), durability: CAR });
 
   // Park (north): grass, a pond, hedges and trees.
   const north = (s: Shape) => s.y < c - HIGHWAY - 50;
@@ -60,7 +66,7 @@ export function buildCity(radius: number, rng: Rng): MapLayout {
         decor.push(flat(s, "plaza"));
         continue;
       }
-      obstacles.push(solid(s, "building"));
+      obstacles.push({ ...solid(s, "building"), durability: BUILDING });
     }
   }
   return {

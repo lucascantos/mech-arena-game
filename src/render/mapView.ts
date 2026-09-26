@@ -64,12 +64,29 @@ export function drawMap(ctx: CanvasRenderingContext2D, world: World): void {
   ctx.stroke();
   ctx.restore();
 
+  // Destroyed cover: rubble (buildings) or a scorch mark (cars), flat and dashed.
+  for (const o of world.destroyed) {
+    ctx.fillStyle = o.look === "car" ? UI.scorch : UI.rubble;
+    ctx.strokeStyle = OBSTACLE_COLORS[o.look][1];
+    ctx.lineWidth = 1;
+    ctx.setLineDash([6, 6]);
+    fillShape(ctx, o.shape);
+    strokeShape(ctx, o.shape);
+    ctx.setLineDash([]);
+  }
+
   for (const o of world.obstacles) {
     const [fill, edge] = OBSTACLE_COLORS[o.look];
     ctx.fillStyle = fill;
     ctx.strokeStyle = edge;
     ctx.lineWidth = 2;
     fillShape(ctx, o.shape);
+    // Damaged cover darkens as it wears down.
+    const max = o.durability?.hp;
+    if (max && o.hp !== undefined && o.hp < max) {
+      ctx.fillStyle = `rgba(0, 0, 0, ${(0.55 * (1 - o.hp / max)).toFixed(2)})`;
+      fillShape(ctx, o.shape);
+    }
     strokeShape(ctx, o.shape);
   }
 

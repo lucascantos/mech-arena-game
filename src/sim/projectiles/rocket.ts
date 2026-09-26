@@ -1,11 +1,8 @@
 import type { Fighter } from "../fighter";
-import { distanceToBox } from "../geometry";
-import { normalize, sub, type Vec2 } from "../vec";
+import { explode } from "../explosion";
+import { normalize, type Vec2 } from "../vec";
 import type { World } from "../world";
 import { Projectile, type ProjectileSpec } from "./projectile";
-
-/** Explosions deal full damage at the center and this fraction at the edge. */
-const BLAST_EDGE_DAMAGE = 0.5;
 
 /**
  * An explosive projectile. Flies straight and explodes on contact, at the
@@ -34,22 +31,16 @@ export class Rocket extends Projectile {
     return --this.fuseLeft <= 0 || outOfRange;
   }
 
-  /** Explodes wherever it ends, whether or not it touched someone. */
+  /** The blast deals with cover (see impact), so the direct hit adds nothing. */
+  protected hitCover(): void {}
+
+  /** Explodes wherever it ends, whether or not it touched someone (or something). */
   protected impact(world: World, center: Vec2, _target: Fighter | null): void {
     this.alive = false;
     this.pos = center;
-    world.emit({ kind: "explosion", pos: center, radius: this.blastRadius, damageType: this.damageType });
+    const source = { id: this.ownerId, team: this.team };
     const crit = this.rollCrit(world); // one roll for the whole blast
-    let dealt = 0;
-    for (const f of world.fighters) {
-      if (!f.alive || f.team === this.team) continue;
-      const d = distanceToBox(center, f.pos, { x: f.size.x / 2, y: f.size.y / 2 });
-      if (d > this.blastRadius) continue;
-      const falloff = 1 - (1 - BLAST_EDGE_DAMAGE) * (d / this.blastRadius);
-      const away = normalize(sub(f.pos, center));
-      const dir = away.x === 0 && away.y === 0 ? normalize(this.vel) : away;
-      dealt += this.hit(world, f, this.damage * this.falloff * falloff, dir, this.knockback * falloff, f.pos, crit);
-    }
+    const dealt = explode(world, center, this.blastRadius, this.damage * this.falloff, this.knockback, source, crit, this.damageType, normalize(this.vel));
     if (dealt > 0) world.emit({ kind: "projectileHit", ownerId: this.ownerId });
   }
 }

@@ -39,6 +39,9 @@ export class Effects {
         this.list.push({ kind: "impact", pos: e.pos, color: DAMAGE_COLORS[e.damageType], value: 10, born: now, life: 120 });
       } else if (e.kind === "explosion") {
         this.list.push({ kind: "explosion", pos: e.pos, color: DAMAGE_COLORS[e.damageType], value: e.radius, born: now, life: 350 });
+      } else if (e.kind === "coverDestroyed" && e.look === "building") {
+        // A collapsing building: a big cloud of dust (a car's own explosion covers it).
+        this.list.push({ kind: "explosion", pos: e.pos, color: UI.dust, value: 140, born: now, life: 700 });
       } else if (e.kind === "beam") {
         this.list.push({ kind: "beam", pos: e.from, to: e.to, color: DAMAGE_COLORS.energy, value: e.width, born: now, life: 250 });
       } else if (e.kind === "slash") {

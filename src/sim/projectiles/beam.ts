@@ -1,6 +1,7 @@
 import { arenaExit } from "../arena";
 import type { Fighter } from "../fighter";
-import { firstObstacleHit } from "../obstacles";
+import { damageCover } from "../cover";
+import { firstObstacle } from "../obstacles";
 import { segmentHitsBox } from "../geometry";
 import { add, lerp, length, normalize, scale, sub } from "../vec";
 import type { World } from "../world";
@@ -19,7 +20,9 @@ export class Beam extends Projectile {
     const from = this.pos;
     const dir = normalize(this.vel);
     const end = add(from, scale(dir, this.range));
-    let to = lerp(from, end, Math.min(arenaExit(world.arena, from, end), firstObstacleHit(world.obstacles, from, end) ?? 1));
+    const cover = firstObstacle(world.obstacles, from, end);
+    const wall = arenaExit(world.arena, from, end);
+    let to = lerp(from, end, Math.min(wall, cover?.t ?? 1));
 
     const pad = this.size / 2;
     const hits: { f: Fighter; t: number }[] = [];
@@ -43,6 +46,11 @@ export class Beam extends Projectile {
       }
     }
     this.pos = to;
+    // Reached the cover that stopped it (a shield in front would have ended it sooner): burn it (cars; not buildings).
+    if (cover && cover.t <= wall && length(sub(to, from)) >= reach * cover.t - 1) {
+      this.rangeLeft = this.range - reach * cover.t;
+      damageCover(world, cover.obstacle, this.damage * this.falloff, false, { id: this.ownerId, team: this.team });
+    }
     if (dealt > 0) world.emit({ kind: "projectileHit", ownerId: this.ownerId });
     world.emit({ kind: "beam", ownerId: this.ownerId, from, to, width: this.size });
   }

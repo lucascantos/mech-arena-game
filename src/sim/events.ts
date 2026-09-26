@@ -1,3 +1,4 @@
+import type { ObstacleLook } from "./obstacles";
 import type { Vec2 } from "./vec";
 import type { DamageType } from "./weapons/weaponStats";
 
@@ -15,5 +16,7 @@ export type WorldEvent =
   | { kind: "beam"; ownerId: number; from: Vec2; to: Vec2; width: number }
   /** A melee sweep: an arc of `arc` degrees and `radius` around `pos`, centered on `dir`. */
   | { kind: "slash"; ownerId: number; pos: Vec2; dir: Vec2; radius: number; arc: number }
+  /** A destructible obstacle (car, building) was destroyed. */
+  | { kind: "coverDestroyed"; pos: Vec2; look: ObstacleLook }
   | { kind: "roundOver"; winnerTeam: number | null }
   | { kind: "roundStart" };

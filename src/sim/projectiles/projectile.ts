@@ -3,7 +3,8 @@ import { clampToArena, insideArena } from "../arena";
 import { dealDamage } from "../damage";
 import type { Fighter } from "../fighter";
 import { segmentHitsBox } from "../geometry";
-import { firstObstacleHit } from "../obstacles";
+import { damageCover } from "../cover";
+import { firstObstacle, type Obstacle } from "../obstacles";
 import { add, length, lerp, normalize, scale, type Vec2 } from "../vec";
 import type { DamageType } from "../weapons/weaponStats";
 import type { World } from "../world";
@@ -97,11 +98,12 @@ export class Projectile {
     const next = add(this.pos, step);
 
     // A wall or obstacle in the way ends the shot there (grenades fly over everything).
-    const blocked = this.hitsFighters ? firstObstacleHit(world.obstacles, this.pos, next, this.size / 2) : null;
+    const blocked = this.hitsFighters ? firstObstacle(world.obstacles, this.pos, next, this.size / 2) : null;
     const hit = this.firstFighterHit(world, next);
-    if (blocked !== null && (!hit || blocked < hit.t)) {
-      this.rangeLeft -= length(step) * blocked;
-      this.impact(world, lerp(this.pos, next, blocked), null);
+    if (blocked && (!hit || blocked.t < hit.t)) {
+      this.rangeLeft -= length(step) * blocked.t;
+      this.hitCover(world, blocked.obstacle);
+      this.impact(world, lerp(this.pos, next, blocked.t), null);
       return;
     }
     if (hit) {
@@ -150,6 +152,11 @@ export class Projectile {
    */
   protected hit(world: World, f: Fighter, damage: number, dir: Vec2, knockback: number, at: Vec2, crit: boolean): number {
     return dealDamage(world, f, this.ownerId, damage, dir, knockback, at, crit);
+  }
+
+  /** Hitting cover: a plain shot damages it directly (cars; buildings shrug it off). Explosives override this. */
+  protected hitCover(world: World, o: Obstacle): void {
+    damageCover(world, o, this.damage * this.falloff, false, { id: this.ownerId, team: this.team });
   }
 
   /** False for shots that fly over fighters (grenades) and only end at range. */

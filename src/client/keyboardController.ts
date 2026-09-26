@@ -106,13 +106,13 @@ export class KeyboardController implements Controller {
 
   /**
    * Called every tick with whether a lock-on is aiming. In rotating mode the
-   * view then follows the target (`facing`) and the mouse moves a target
+   * view then follows the target (`toTarget`, smoothed, see TurnAim.follow) and the mouse moves a target
    * cursor, starting from the crosshair; when the lock ends, the mouse turns
    * the view again from where the lock left it.
    */
-  setLockedOn(locked: boolean, facing: Vec2 | null): void {
+  setLockedOn(locked: boolean, toTarget: Vec2 | null): void {
     if (!this.rotating) return;
-    if (locked && facing) this.turn.sync(facing);
+    if (locked && toTarget) this.turn.follow(toTarget);
     if (locked && !this.lockedOn) this.targetCursor = this.crosshairOnScreen;
     if (!locked) this.targetCursor = null;
     this.lockedOn = locked;

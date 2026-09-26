@@ -44,5 +44,7 @@ export function updateLockOn(game: Game, keyboard: KeyboardController, camera: C
   const self = match?.inCountdown ? null : game.possessed;
   lockOn.update(world, self, cursor ? camera.screenToWorld(cursor) : null, visible);
   // Rotating view: while a lock steers the aim, the view follows it and the mouse moves the target cursor.
-  keyboard.setLockedOn(!!self && lockOn.targetId !== null, self?.facing ?? null);
+  const target = self && lockOn.targetId !== null ? world.getFighter(lockOn.targetId) : undefined;
+  const toTarget = self && target ? { x: target.pos.x - self.pos.x, y: target.pos.y - self.pos.y } : null;
+  keyboard.setLockedOn(toTarget !== null, toTarget);
 }

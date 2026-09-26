@@ -1,3 +1,4 @@
+import { DT } from "../sim/constants";
 import type { Vec2 } from "../sim/vec";
 
 /** Radians of turn per pixel of mouse movement. */
@@ -7,6 +8,10 @@ const MIN_DISTANCE = 80;
 /** Up to near the top of the screen: the mech sits 3/4 of the way down a base 800-high view (heads that see farther scale it). */
 const MAX_DISTANCE = 560;
 const DISTANCE_PER_PIXEL = 1;
+/** Locked on: the view doesn't turn while the target is within this angle of straight ahead... */
+const LOCK_DEAD_ZONE = (8 * Math.PI) / 180;
+/** ...and beyond it, eases toward the target at this rate (per second, exponential). */
+const LOCK_FOLLOW = 5;
 
 /**
  * FPS-style aiming for the rotating camera: the view turns so where you look
@@ -28,7 +33,20 @@ export class TurnAim {
     this.distance = Math.max(MIN_DISTANCE, Math.min(max, this.distance - dy * DISTANCE_PER_PIXEL));
   }
 
-  /** Takes the view direction from the mech (at the start, and while a lock-on turns it). */
+  /**
+   * One tick of following a locked target in direction `toTarget`: no turn
+   * inside the dead zone, else an eased turn by how far it's outside it, so
+   * the view stays calm while the lock's aim jitters around a strafing target.
+   */
+  follow(toTarget: Vec2): void {
+    const want = Math.atan2(toTarget.y, toTarget.x);
+    if (Number.isNaN(this.yaw)) return void (this.yaw = want);
+    const diff = Math.atan2(Math.sin(want - this.yaw), Math.cos(want - this.yaw));
+    const outside = Math.abs(diff) - LOCK_DEAD_ZONE;
+    if (outside > 0) this.yaw += Math.sign(diff) * outside * (1 - Math.exp(-LOCK_FOLLOW * DT));
+  }
+
+  /** Takes the view direction from the mech (when the FPS view starts). */
   sync(facing: Vec2): void {
     this.yaw = Math.atan2(facing.y, facing.x);
   }

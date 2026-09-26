@@ -33,6 +33,8 @@ export interface Snapshot {
   fighters: FighterState[];
   projectiles: ProjectileState[];
   match: MatchState;
+  /** Ids of cover destroyed this round (cars, buildings). */
+  gone: number[];
   /** Everything that happened since the previous snapshot (hits, kills, explosions...). */
   events: WorldEvent[];
 }

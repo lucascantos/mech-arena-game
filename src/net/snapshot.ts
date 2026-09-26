@@ -25,7 +25,8 @@ export function takeSnapshot(world: World, match: Match | null, events: WorldEve
   const m: MatchState = match
     ? [[...match.scores], match.countdownLeft, match.fightTicks, match.roundOver, match.lastWinner ?? -1]
     : [[], 0, 999, false, -1];
-  return { t: "snap", tick: world.tick, fighters, projectiles, match: m, events };
+  const gone = world.destroyed.map((o) => o.id!);
+  return { t: "snap", tick: world.tick, fighters, projectiles, match: m, events, gone };
 }
 
 /** A joined player's read-only copy of the host's match state (for the HUD). */
@@ -48,6 +49,7 @@ export class MatchMirror implements MatchView {
  */
 export function applySnapshot(world: World, mirror: MatchMirror, snap: Snapshot): void {
   world.tick = snap.tick;
+  if (snap.gone.length !== world.destroyed.length) world.syncDestroyed(snap.gone);
   for (const [id, x, y, vx, vy, fx, fy, hp, slot, energy, dash, brace, weapons, back] of snap.fighters) {
     const f = world.getFighter(id);
     if (!f) continue;
